@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="fr" class="bg-neutral-100 dark:bg-neutral-900 text-gray-900 dark:text-gray-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+</head>
+
+<body class="bg-neutral-100 dark:bg-neutral-900 text-gray-900 dark:text-gray-100">
+    <div class="relative container mx-auto max-w-3xl p-4 h-screen">    
+        <h3 class="text-2xl font-bold mb-4">JW AI</h3>
+        
+        <div id="response" class="flex flex-col gap-4 mt-4">
+            <div class="hidden flex flex-row gap-2 w-full" id="user-template">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-10">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                    <path d="M12 13a3 3 0 1 0 0 -6a3 3 0 0 0 0 6z" />
+                    <path d="M12 3c7.2 0 9 1.8 9 9s-1.8 9 -9 9s-9 -1.8 -9 -9s1.8 -9 9 -9z" />
+                    <path d="M6 20.05v-.05a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v.05" />
+                </svg>
+                <div
+                    class="flex flex-col w-full bg-neutral-200 dark:bg-neutral-800 text-gray-900 dark:text-gray-100 p-2 rounded-md"></div>
+            </div>
+            
+            <div class="hidden flex flex-row gap-2 w-full" id="assistant-template">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-10">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                    <path d="M8 16v-6a2 2 0 1 1 4 0v6" />
+                    <path d="M8 13h4" />
+                    <path d="M16 8v8" />
+                </svg>
+                <div
+                    class="flex flex-col w-full bg-neutral-200 dark:bg-neutral-800 text-gray-900 dark:text-gray-100 p-2 rounded-md"></div>
+            </div>
+        </div>
+
+        <form id="question-form" class="fixed bottom-2 flex flex-col w-full mx-auto max-w-3xl space-y-4 mt-10 bg-neutral-50 dark:bg-neutral-800 rounded-md p-4 shadow dark:shadow">
+            <div class="flex gap-x-2 items-center">
+                <textarea id="user-input" rows="1" placeholder="Message JW AI"
+                    class="p-2 bg-neutral-100 dark:bg-neutral-700 text-gray-900 dark:text-gray-100 rounded-md flex-1"
+                    style="resize: none; overflow: hidden;"
+                    oninput="this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px';"></textarea>
+                <button type="submit" class="self-end p-2 bg-white text-black rounded-full hover:text-gray-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-5">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path d="M10 14l11 -11" />
+                        <path d="M21 3l-6.5 18a.55 .55 0 0 1 -1 0l-3.5 -7l-7 -3.5a.55 .55 0 0 1 0 -1l18 -6.5" />
+                    </svg>
+                </button>
+            </div>
+            <span class="text-xs text-gray-500">JW AI peut faire des erreurs. Envisagez de vérifier les informations importantes.</span>
+        </form>
+    </div>
+
+    <script>
+        const socket = io();
+        var thread_id = 0;
+
+        var startedMessaging = false;
+        var assistantMessageSection = null;
+
+        const userTemplate = document.getElementById("user-template");
+        const assistantTemplate = document.getElementById("assistant-template");
+
+        document.getElementById("question-form").onsubmit = function (event) {
+            event.preventDefault();
+            const userInput = document.getElementById("user-input").value;
+
+            // Envoie la question via WebSocket
+            if (thread_id == 0) {
+                socket.emit('ask_openai', { user_input: userInput });
+            } else {
+                socket.emit('ask_openai', { user_input: userInput, thread_id: thread_id });
+            }
+
+            const userMessage = userTemplate.cloneNode(true);
+            userMessage.classList.remove('hidden');
+            userMessage.querySelector('div').innerText = userInput;
+            document.getElementById("response").appendChild(userMessage);
+
+            window.scrollTo(0, document.body.scrollHeight);
+            document.getElementById("user-input").value = "";
+        };
+    
+        // Écoute les réponses de l'API
+        socket.on('response', function (data) {
+            if ("thread_id" in data) {
+                thread_id = data.thread_id;
+            }
+
+            if ("message" in data) {
+                if (startedMessaging == false) {                   
+                    assistantMessageSection = assistantTemplate.cloneNode(true);
+                    document.getElementById("response").appendChild(assistantMessageSection);
+                    startedMessaging = true;
+                }
+
+                var message_text = assistantMessageSection.querySelector('div').innerText += data.message;
+
+                // Update the message when ** is found, measing between must be in bold
+                if (message_text.includes("**")) {
+                    message_text = message_text.replace(/\*\*(.*?)\*\*/g, "<b class='font-bold'>$1</b>");
+                }
+
+                assistantMessageSection.classList.remove('hidden');
+                assistantMessageSection.querySelector('div').innerText = message_text;
+
+                // scroll to the bottom of document
+                window.scrollTo(0, document.body.scrollHeight);
+            }
+
+            if ("error" in data) {
+                console.log(data);
+                const errorMessage = document.createElement('span');
+                errorMessage.innerText = data.error;
+                errorMessage.style.color = "red";
+                document.getElementById("response").appendChild(errorMessage);
+            }
+            
+            if ("status" in data) {
+                console.log(data);
+
+                if (data.status == "end") {
+                    startedMessaging = false;
+                }
+
+                var message = document.createElement('span');
+
+                if (data.status == "in_progress") {
+                    message.innerText = " ... ";
+                    document.getElementById("response").appendChild(message);
+                }
+
+                if (data.status == "completed") {
+                    document.getElementById("response").removeChild(message);
+                }
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function () {
+            document.getElementById("user-input").focus();
+        });
+
+        document.getElementById("user-input").addEventListener('keydown', function (event) {
+            if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                document.getElementById("question-form").dispatchEvent(new Event('submit'));
+            }
+        }); 
+    </script>
+</body>
+
+</html>
