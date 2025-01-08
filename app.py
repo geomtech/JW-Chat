@@ -168,10 +168,10 @@ class EventHandler(AssistantEventHandler):
         #print("The type ofrun_step run step is ", type(run_step), flush=True)
         #print(f"\n run step created assistant > {run_step}\n", flush=True)
 
-    @override
-    def on_run_step_done(self, run_step: RunStep) -> None:
-        #print(f"\n run step done assistant > {run_step}\n", flush=True)
-        pass
+    # @override
+    # def on_run_step_done(self, run_step: RunStep) -> None:
+    #     #print(f"\n run step done assistant > {run_step}\n", flush=True)
+    #     pass
 
     # def on_tool_call_delta(self, delta, snapshot):
     #     if delta.type == 'function':
@@ -191,13 +191,13 @@ class EventHandler(AssistantEventHandler):
     #         print("ELSE")
     #         print(delta, end="", flush=True)
 
-    @override
-    def on_event(self, event: AssistantStreamEvent) -> None:
-        # print("In on_event of event is ", event.event, flush=True)
+    # @override
+    # def on_event(self, event: AssistantStreamEvent) -> None:
+    #     # print("In on_event of event is ", event.event, flush=True)
 
-        if event.event == "thread.run.requires_action":
-            print("\nthread.run.requires_action > submit tool call")
-            print(f"ARGS: {self.arguments}")
+    #     if event.event == "thread.run.requires_action":
+    #         print("\nthread.run.requires_action > submit tool call")
+    #         print(f"ARGS: {self.arguments}")
 
 
 @app.route('/')
