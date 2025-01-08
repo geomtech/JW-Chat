@@ -99,15 +99,16 @@
                     startedMessaging = true;
                 }
 
-                var message_text = assistantMessageSection.querySelector('div').innerText += data.message;
+                var message_text = assistantMessageSection.querySelector('div').html += data.message;
 
                 // Update the message when ** is found, measing between must be in bold
                 if (message_text.includes("**")) {
                     message_text = message_text.replace(/\*\*(.*?)\*\*/g, "<b class='font-bold'>$1</b>");
+                    message_text = message_text.html();
                 }
 
                 assistantMessageSection.classList.remove('hidden');
-                assistantMessageSection.querySelector('div').innerText = message_text;
+                assistantMessageSection.querySelector('div').html = message_text;
 
                 // scroll to the bottom of document
                 window.scrollTo(0, document.body.scrollHeight);

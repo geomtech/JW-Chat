@@ -25,26 +25,6 @@ openai_client = OpenAI(api_key=OPEN_API_KEY)
 
 openai_assistant_id = ""
 
-
-def my_example_funtion():
-   return json.dumps({
-       "domain": [
-           {
-               "name": "hawkflow.ai",
-               "data": {
-                   "14-03-2024": "31.28%",
-                   "15-03-2024": "28.8%",
-                   "16-03-2024": "34.95%",
-                   "17-03-2024": "32.67%",
-                   "18-03-2024": "33.46%",
-                   "19-03-2024": "33.23%",
-                   "20-03-2024": "33.37%",
-                   "21-03-2024": "34.46%"
-               }
-           }
-       ]
-   })
-
 class EventHandler(AssistantEventHandler):
     def __init__(self, thread_id, assistant_id):
         super().__init__()
