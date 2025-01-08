@@ -1,6 +1,10 @@
 import os
 import time
 import json
+
+from gevent import monkey
+monkey.patch_all()
+
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
 
@@ -14,7 +18,7 @@ from openai.types.beta.threads.runs import ToolCall, RunStep, FunctionToolCall
 from openai.types.beta import AssistantStreamEvent
 
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
 
 OPEN_API_KEY = os.environ.get("OPENAI_API_KEY", "sk-proj")
 openai_client = OpenAI(api_key=OPEN_API_KEY)
