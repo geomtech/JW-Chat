@@ -239,4 +239,4 @@ def handle_ask_openai(data):
 
 
 if __name__ == '__main__':
-    socketio.run(app, host="0.0.0.0", debug=True, port=os.getenv("PORT", default=5000))
+    socketio.run(app, host="0.0.0.0", debug=True, port=int(os.getenv("PORT", default=5000)))
