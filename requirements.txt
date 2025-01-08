@@ -5,3 +5,4 @@ flask_socketio
 gevent
 gevent-websocket
 numpy
+pandas
