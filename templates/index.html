@@ -154,8 +154,9 @@
 
             if ("error" in data) {
                 console.log(data);
-                const errorMessage = document.createElement('span');
-                errorMessage.innerText = data.error;
+                const errorMessage = assistantTemplate.cloneNode(true);
+                errorMessage.classList.remove('hidden');
+                errorMessage.querySelector('div').innerText = data.error;
                 errorMessage.style.color = "red";
                 document.getElementById("response").appendChild(errorMessage);
             }

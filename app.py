@@ -158,12 +158,14 @@ class EventHandler(AssistantEventHandler):
                         article_text = article_content.get_text()
                         article_title = article_content.title.string
 
-                        self.output = {
-                            "title": article_title,
-                            "content": article_text,
-                            "url": article_url,
-                            "other_articles": articles_urls
-                        }
+                        self.output = str(
+                            {
+                                "title": article_title,
+                                "content": article_text,
+                                "url": article_url,
+                                "other_articles": articles_urls
+                            }
+                        )
 
                         with openai_client.beta.threads.runs.submit_tool_outputs_stream(
                             thread_id=self.thread_id,
@@ -202,33 +204,36 @@ def index():
 
 @socketio.on('ask_openai')
 def handle_ask_openai(data):
-    prompt = data.get("user_input")
-    thread_id = data.get("thread_id", None)
+    try:
+        prompt = data.get("user_input")
+        thread_id = data.get("thread_id", None)
 
-    assistants = openai_client.beta.assistants.list()
-    openai_assistant_id = str(assistants.data[0].id)
+        assistants = openai_client.beta.assistants.list()
+        openai_assistant_id = str(assistants.data[0].id)
 
-    openai_client.beta.assistants.retrieve(assistant_id=openai_assistant_id)
+        openai_client.beta.assistants.retrieve(assistant_id=openai_assistant_id)
 
-    new_thread = None
-    if thread_id:
-        new_thread = openai_client.beta.threads.retrieve(thread_id=thread_id)
-    else:
-        new_thread = openai_client.beta.threads.create()
+        new_thread = None
+        if thread_id:
+            new_thread = openai_client.beta.threads.retrieve(thread_id=thread_id)
+        else:
+            new_thread = openai_client.beta.threads.create()
 
-    socketio.emit('response', {'thread_id': f"{new_thread.id}"})
-    
-    openai_client.beta.threads.messages.create(thread_id=new_thread.id, role="user", content=prompt)
+        socketio.emit('response', {'thread_id': f"{new_thread.id}"})
+        
+        openai_client.beta.threads.messages.create(thread_id=new_thread.id, role="user", content=prompt)
 
-    with openai_client.beta.threads.runs.stream(
-        thread_id=new_thread.id,
-        assistant_id=openai_assistant_id,
-        event_handler=EventHandler(
+        with openai_client.beta.threads.runs.stream(
             thread_id=new_thread.id,
-            assistant_id=openai_assistant_id
-        ),
-    ) as stream:
-        stream.until_done()
+            assistant_id=openai_assistant_id,
+            event_handler=EventHandler(
+                thread_id=new_thread.id,
+                assistant_id=openai_assistant_id
+            ),
+        ) as stream:
+            stream.until_done()
+    except Exception as e:
+        socketio.emit('response', {'error': f"Une erreur s'est produite: {str(e)}"})
 
 
 if __name__ == '__main__':
