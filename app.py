@@ -1,10 +1,11 @@
-import os
-import time
-import json
-
 from gevent import monkey
 monkey.patch_all()
 
+import os
+import time
+import json
+import requests
+from bs4 import BeautifulSoup
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
 
@@ -38,146 +39,160 @@ class EventHandler(AssistantEventHandler):
         self.arguments = ""
 
     @override
-    def on_text_created(self, text) -> None:
-        #print(f"\nassistant on_text_created > ", end="", flush=True)
-        pass
-
-    @override
     def on_text_delta(self, delta, snapshot):
-        # print(f"\nassistant on_text_delta > {delta.value}", end="", flush=True)
-        if "【" not in delta.value:
-            socketio.emit('response', {'message': f"{delta.value}"})
-        else:
-            print(f"\nassistant on_text_delta > {delta.value}", end="", flush=True)
+        if self.tool_id == None:
+            print(f"\non_text_delta > {delta.value}\n", flush=True)
+            socketio.emit('response', {'message': delta.value})
 
     @override
     def on_end(self):
-        #print(f"\n end assistant > ",self.current_run_step_snapshot, end="", flush=True)
-        socketio.emit('response', {'status': f"end"})
+        socketio.emit('response', {'status': 'end'})
 
     @override
-    def on_exception(self, exception: Exception) -> None:
-        """Fired whenever an exception happens during streaming"""
-        print(f"\nassistant > {exception}\n", end="", flush=True)
+    def on_message_delta(self, delta, snapshot):
+        if self.tool_id:
+            print(f"\non_message_delta > {delta.content[0].text}\n", flush=True)
+            socketio.emit('response', {'message': delta.content[0].text.value})
 
     @override
-    def on_message_created(self, message: Message) -> None:
-        #print(f"\nassistant on_message_created > {message}\n", end="", flush=True)
-        pass
+    def on_message_done(self, message) -> None:
+        # print a citation to the file searched
+        message_content = message.content[0].text
+        annotations = message_content.annotations
+        citations = []
+        for index, annotation in enumerate(annotations):
+            message_content.value = message_content.value.replace(
+                annotation.text, f"[{index}]"
+            )
+            if file_citation := getattr(annotation, "file_citation", None):
+                cited_file = openai_client.files.retrieve(file_citation.file_id)
+
+                if "nwt" in cited_file.filename:
+                    url = f"https://www.jw.org/finder?pub=nwtsty&bible=20018000&wtlocale=F&srcid=share"
+                    citations.append({
+                        "url": url,
+                        "title": f"[{index}] Traduction du Monde Nouveau"
+                    })
+
+        socketio.emit('response', {'sources': citations, 'completed_message': message_content.value})
 
     @override
-    def on_message_done(self, message: Message) -> None:
-        #print(f"\nassistant on_message_done > {message}\n", end="", flush=True)
-        pass
+    def on_tool_call_created(self, tool_call):       
+        self.tool_id = tool_call.id
+
+        if tool_call.type == "file_search":
+            socketio.emit('response', {'status': "source_search"})
+        elif tool_call.type == "function":
+            self.function_name = tool_call.function.name
+            socketio.emit('response', {'status': "function_call"})
+
+            keep_retrieving_run = openai_client.beta.threads.runs.retrieve(
+                thread_id=self.thread_id,
+                run_id=self.run_id
+            )
+
+            while keep_retrieving_run.status in ["queued", "in_progress"]: 
+                keep_retrieving_run = openai_client.beta.threads.runs.retrieve(
+                    thread_id=self.thread_id,
+                    run_id=self.run_id
+                )
 
     @override
-    def on_message_delta(self, delta: MessageDelta, snapshot: Message) -> None:
-        # print(f"\nassistant on_message_delta > {delta}\n", end="", flush=True)
-        pass
+    def on_tool_call_done(self, tool_call):   
+        keep_retrieving_run = openai_client.beta.threads.runs.retrieve(
+            thread_id=self.thread_id,
+            run_id=self.run_id
+        )
+             
+        # search on JW.ORG
+        if keep_retrieving_run.status == "requires_action":
+            if tool_call.type == "function":
+                if tool_call.function.name == "search_jw_org":
+                    articles_urls = []
 
-    # def on_tool_call_created(self, tool_call):
-    #     # 4
-    #     print(f"\nassistant on_tool_call_created > {tool_call}")
+                    query = json.loads(tool_call.function.arguments)['query']
 
-    #     if tool_call.type == FunctionToolCall:
-    #         self.function_name = tool_call.function.name
+                    get_bearer_token = requests.get("https://b.jw-cdn.org/tokens/jworg.jwt")
+                    bearer_token = get_bearer_token.text
 
-    #         self.tool_id = tool_call.id
-    #         print(f"\non_tool_call_created > run_step.status > {self.run_step.status}")
+                    jw_url = f"https://b.jw-cdn.org/apis/search/results/F/all?q={str(query)}"
 
-    #         print(f"\nassistant > {tool_call.type} {self.function_name}\n", flush=True)
+                    try:
+                        r = requests.get(jw_url, headers={"Authorization": f"Bearer {bearer_token}"})
+                        r = r.json()
 
-    #         keep_retrieving_run = openai_client.beta.threads.runs.retrieve(
-    #             thread_id=self.thread_id,
-    #             run_id=self.run_id
-    #         )
+                        results = r.get("results", [])
 
-    #         while keep_retrieving_run.status in ["queued", "in_progress"]:
-    #             keep_retrieving_run = openai_client.beta.threads.runs.retrieve(
-    #                 thread_id=self.thread_id,
-    #                 run_id=self.run_id
-    #             )
+                        if len(results) > 0:
+                            socketio.emit('response', {'status': "Résultats trouvés..."})
+                        
+                        for result in results:
+                            label = result.get("label", None)
 
-    #             print(f"\nSTATUS: {keep_retrieving_run.status}")
+                            if label == "Vidéos":
+                                pass
 
-    #     print(f"\nassistant > {tool_call.type} Utilisation de la \n", flush=True)
+                            if label == "Rubriques de l'Index":
+                                pass
+                            
+                            if label == None:
+                                results_in_result = result.get("results", [])
+                                for result_in_result in results_in_result:
+                                    if result_in_result.get("subtype", None) == "article":
+                                        links = result_in_result.get("links", None)
 
-    # @override
-    # def on_tool_call_done(self, tool_call: ToolCall) -> None:
-    #     keep_retrieving_run = openai_client.beta.threads.runs.retrieve(
-    #         thread_id=self.thread_id,
-    #         run_id=self.run_id
-    #     )
+                                        if links.get("jw.org"):
+                                            url = links.get("jw.org")
+                                            articles_urls.append(url)
+                    except Exception as e:
+                        print(f"\nassistant > {str(e)}\n", flush=True)
 
-    #     print(f"\nDONE STATUS: {keep_retrieving_run.status}")
+                    if len(articles_urls) > 0:
+                        print("plusieurs articles trouvés", flush=True)
+                        # get the first article
+                        article_url = articles_urls[0]
+                        article = requests.get(article_url, headers={"User-Agent": "Mozilla/5.0"})
+                        article_content = BeautifulSoup(article.text, 'html.parser')
+                        for script in article_content(["script", "style"]):
+                            script.decompose()
+                        article_text = article_content.get_text()
+                        article_title = article_content.title.string
 
-    #     if keep_retrieving_run.status == "completed":
-    #         all_messages = openai_client.beta.threads.messages.list(thread_id=self.thread_id)
+                        self.output = {
+                            "title": article_title,
+                            "content": article_text,
+                            "url": article_url,
+                            "other_articles": articles_urls
+                        }
 
-    #         print(all_messages.data[0].content[0].text.value, "", "")
-    #         return
+                        with openai_client.beta.threads.runs.submit_tool_outputs_stream(
+                            thread_id=self.thread_id,
+                            run_id=self.run_id,
+                            tool_outputs=[{
+                                "tool_call_id": self.tool_id,
+                                "output": self.output,
+                            }],
+                            event_handler=EventHandler(self.thread_id, self.assistant_id)
+                        ) as stream:
+                            stream.until_done()
 
-    #     elif keep_retrieving_run.status == "requires_action":
-    #         print("here you would call your function")
+                        jw_doc_id = article_url.split("docid=")[-1].split("&")[0]
+                        jw_article_image = f"https://cms-imgp.jw-cdn.org/img/p/{jw_doc_id}/univ/art/{jw_doc_id}_univ_sqs_lg.jpg"
 
-    #         if self.function_name == "example_blog_post_function":
-    #             function_data = my_example_funtion()
+                        jw_article_image_valid = requests.get(jw_article_image)
+                        if jw_article_image_valid.status_code != 200:
+                            jw_article_image = "/static/img/article.png"
 
-    #             self.output = function_data
-
-    #             with openai_client.beta.threads.runs.submit_tool_outputs_stream(
-    #                 thread_id=self.thread_id,
-    #                 run_id=self.run_id,
-    #                 tool_outputs=[{
-    #                     "tool_call_id": self.tool_id,
-    #                     "output": self.output,
-    #                 }],
-    #                 event_handler=EventHandler(self.thread_id, self.assistant_id)
-    #             ) as stream:
-    #                 stream.until_done()
-    #         else:
-    #             print("unknown function")
-    #             return
+                        socketio.emit('response', {'article': {
+                            "url": article_url,
+                            "title": article_title,
+                            "image": jw_article_image
+                        }})
 
     @override
     def on_run_step_created(self, run_step: RunStep) -> None:
-        # 2
-        #print(f"on_run_step_created")
         self.run_id = run_step.run_id
         self.run_step = run_step
-        #print("The type ofrun_step run step is ", type(run_step), flush=True)
-        #print(f"\n run step created assistant > {run_step}\n", flush=True)
-
-    # @override
-    # def on_run_step_done(self, run_step: RunStep) -> None:
-    #     #print(f"\n run step done assistant > {run_step}\n", flush=True)
-    #     pass
-
-    # def on_tool_call_delta(self, delta, snapshot):
-    #     if delta.type == 'function':
-    #         # the arguments stream thorugh here and then you get the requires action event
-    #         print(delta.function.arguments, end="", flush=True)
-    #         self.arguments += delta.function.arguments
-    #     elif delta.type == 'code_interpreter':
-    #         print(f"on_tool_call_delta > code_interpreter")
-    #         if delta.code_interpreter.input:
-    #             print(delta.code_interpreter.input, end="", flush=True)
-    #         if delta.code_interpreter.outputs:
-    #             print(f"\n\noutput >", flush=True)
-    #             for output in delta.code_interpreter.outputs:
-    #                 if output.type == "logs":
-    #                     print(f"\n{output.logs}", flush=True)
-    #     else:
-    #         print("ELSE")
-    #         print(delta, end="", flush=True)
-
-    # @override
-    # def on_event(self, event: AssistantStreamEvent) -> None:
-    #     # print("In on_event of event is ", event.event, flush=True)
-
-    #     if event.event == "thread.run.requires_action":
-    #         print("\nthread.run.requires_action > submit tool call")
-    #         print(f"ARGS: {self.arguments}")
 
 
 @app.route('/')
@@ -195,27 +210,25 @@ def handle_ask_openai(data):
 
     openai_client.beta.assistants.retrieve(assistant_id=openai_assistant_id)
 
-    try:
-        new_thread = None
-        if thread_id:
-            new_thread = openai_client.beta.threads.retrieve(thread_id=thread_id)
-        else:
-            new_thread = openai_client.beta.threads.create()
+    new_thread = None
+    if thread_id:
+        new_thread = openai_client.beta.threads.retrieve(thread_id=thread_id)
+    else:
+        new_thread = openai_client.beta.threads.create()
 
-        socketio.emit('response', {'thread_id': f"{new_thread.id}"})
-        
-        openai_client.beta.threads.messages.create(
-            thread_id=new_thread.id, role="user", content=prompt)
+    socketio.emit('response', {'thread_id': f"{new_thread.id}"})
+    
+    openai_client.beta.threads.messages.create(thread_id=new_thread.id, role="user", content=prompt)
 
-        with openai_client.beta.threads.runs.stream(
+    with openai_client.beta.threads.runs.stream(
+        thread_id=new_thread.id,
+        assistant_id=openai_assistant_id,
+        event_handler=EventHandler(
             thread_id=new_thread.id,
-            assistant_id=openai_assistant_id,
-            event_handler=EventHandler(new_thread.id, openai_assistant_id),
-        ) as stream:
-            stream.until_done()
-
-    except Exception as e:
-        socketio.emit('response', {'error': f"Erreur : {str(e)}"})
+            assistant_id=openai_assistant_id
+        ),
+    ) as stream:
+        stream.until_done()
 
 
 if __name__ == '__main__':

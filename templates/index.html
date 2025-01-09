@@ -8,10 +8,10 @@
 </head>
 
 <body class="bg-neutral-100 dark:bg-neutral-900 text-gray-900 dark:text-gray-100">
-    <div class="relative container mx-auto max-w-3xl p-4 h-screen">    
-        <h3 class="text-2xl font-bold mb-4">JW AI</h3>
+    <div class="relative container mx-auto max-w-3xl h-screen">    
+        <h3 class="text-2xl font-bold mb-4 p-4">JW AI</h3>
         
-        <div id="response" class="flex flex-col gap-4 mt-4">
+        <div id="response" class="flex flex-col gap-4 mt-4 p-4">
             <div class="hidden flex flex-row gap-2 w-full" id="user-template">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-10">
@@ -37,7 +37,13 @@
             </div>
         </div>
 
-        <form id="question-form" class="fixed bottom-2 flex flex-col w-full mx-auto max-w-3xl space-y-4 mt-10 bg-neutral-50 dark:bg-neutral-800 rounded-md p-4 shadow dark:shadow">
+        <div class="my-2">
+            <span id="status" class="text-xs text-gray-500"></span>
+        </div>
+
+        <div class="flex-grow h-28"></div>
+
+        <form id="question-form" class="fixed -bottom-2 flex flex-col w-full mx-auto max-w-3xl space-y-4 mt-10 bg-neutral-50 dark:bg-neutral-800 rounded-md p-4 shadow dark:shadow">
             <div class="flex gap-x-2 items-center">
                 <textarea id="user-input" rows="1" placeholder="Message JW AI"
                     class="p-2 bg-neutral-100 dark:bg-neutral-700 text-gray-900 dark:text-gray-100 rounded-md flex-1"
@@ -65,6 +71,7 @@
 
         const userTemplate = document.getElementById("user-template");
         const assistantTemplate = document.getElementById("assistant-template");
+        const status = document.getElementById("status");
 
         document.getElementById("question-form").onsubmit = function (event) {
             event.preventDefault();
@@ -88,6 +95,8 @@
     
         // Écoute les réponses de l'API
         socket.on('response', function (data) {
+            console.log(data);
+
             if ("thread_id" in data) {
                 thread_id = data.thread_id;
             }
@@ -99,19 +108,48 @@
                     startedMessaging = true;
                 }
 
-                var message_text = assistantMessageSection.querySelector('div').html += data.message;
+                var message_text = assistantMessageSection.querySelector('div').innerHTML += data.message;
 
                 // Update the message when ** is found, measing between must be in bold
                 if (message_text.includes("**")) {
                     message_text = message_text.replace(/\*\*(.*?)\*\*/g, "<b class='font-bold'>$1</b>");
-                    message_text = message_text.html();
                 }
 
+                // Garder les sauts de ligne
+                message_text = message_text.replace(/\n/g, "<br>");
+
                 assistantMessageSection.classList.remove('hidden');
-                assistantMessageSection.querySelector('div').html = message_text;
+                assistantMessageSection.querySelector('div').innerHTML = message_text;
 
                 // scroll to the bottom of document
                 window.scrollTo(0, document.body.scrollHeight);
+            }
+
+            if ("article" in data) {
+                // article contains the url, title, and image of the article to put on the left side of the message
+                const article = data.article;
+                const articleElement = document.createElement('a');
+                articleElement.classList.add('flex', 'flex-row', 'gap-2', 'w-full', 'mt-2');
+                articleElement.href = article.url;
+                articleElement.target = "_blank";
+                articleElement.innerHTML = "<img src='" + article.image + "' class='w-16 h-16 rounded-md'>";
+                articleElement.innerHTML += "<div class='flex flex-col w-full bg-neutral-200 dark:bg-neutral-800 text-gray-900 dark:text-gray-100 p-2 rounded-md'><a href='" + article.url + "' target='_blank'>" + article.title + "</a></div>";
+                document.getElementById("response").appendChild(articleElement);
+            }
+
+            if ("sources" in data) {
+                if (data.sources.length == 0) {
+                    return;
+                }
+
+                last_message = document.getElementById("response").lastChild.querySelector('div');
+                last_message.innerHTML = data.completed_message;
+
+                last_message.innerHTML += "<br><br><b>Source(s):</b><br>";
+
+                for (var i = 0; i < data.sources.length; i++) {
+                    last_message.innerHTML += "<a href='" + data.sources[i].url + "' target='_blank'>" + data.sources[i].title + "</a><br>";
+                }
             }
 
             if ("error" in data) {
@@ -127,17 +165,27 @@
 
                 if (data.status == "end") {
                     startedMessaging = false;
+                    status.innerText = "";
                 }
 
-                var message = document.createElement('span');
-
                 if (data.status == "in_progress") {
-                    message.innerText = " ... ";
-                    document.getElementById("response").appendChild(message);
+                    status.innerText = "...";
                 }
 
                 if (data.status == "completed") {
-                    document.getElementById("response").removeChild(message);
+                    status.innerText = "";
+                }
+
+                if (data.status == "source_search") {
+                    status.innerText = "Recherche en cours...";
+                }
+
+                if (data.status == "function_call") {
+                    status.innerText = "Recherche sur JW.ORG...";
+                }
+
+                if (data.status == "search_jw_org") {
+                    console.log(data);
                 }
             }
         });
