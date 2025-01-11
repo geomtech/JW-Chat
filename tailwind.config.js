@@ -3,6 +3,7 @@ module.exports = {
   content: [
     './templates/**/*.html',
     './templates/*.html',
+    './static/js/jw-chat.js',
   ],
   theme: {
     extend: {

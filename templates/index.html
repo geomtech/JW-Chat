@@ -3,22 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/css/jw-chat.css">
     <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
 </head>
 
 <body class="bg-neutral-100 dark:bg-neutral-900 text-gray-900 dark:text-gray-100">
     <div class="relative container mx-auto max-w-3xl h-screen">    
-        <h3 class="text-2xl font-bold mb-4 p-4">JW AI</h3>
+        <h3 class="text-2xl font-bold mb-4 p-4">JW CH.AT</h3>
         
         <div id="response" class="flex flex-col gap-4 mt-4 p-4">
             <div class="hidden flex flex-row gap-2 w-full" id="user-template">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-10">
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                    class="size-8 text-gray-500 dark:text-gray-400">
                     <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                    <path d="M12 13a3 3 0 1 0 0 -6a3 3 0 0 0 0 6z" />
-                    <path d="M12 3c7.2 0 9 1.8 9 9s-1.8 9 -9 9s-9 -1.8 -9 -9s1.8 -9 9 -9z" />
-                    <path d="M6 20.05v-.05a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v.05" />
+                    <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" />
+                    <path d="M12 10m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
+                    <path d="M6.168 18.849a4 4 0 0 1 3.832 -2.849h4a4 4 0 0 1 3.834 2.855" />
                 </svg>
                 <div
                     class="flex flex-col w-full bg-neutral-200 dark:bg-neutral-800 text-gray-900 dark:text-gray-100 p-2 rounded-md"></div>
@@ -26,7 +27,7 @@
             
             <div class="hidden flex flex-row gap-2 w-full" id="assistant-template">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-10">
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-8 text-gray-500 dark:text-gray-400">">
                     <path stroke="none" d="M0 0h24v24H0z" fill="none" />
                     <path d="M8 16v-6a2 2 0 1 1 4 0v6" />
                     <path d="M8 13h4" />
@@ -45,7 +46,7 @@
 
         <form id="question-form" class="fixed -bottom-2 flex flex-col w-full mx-auto max-w-3xl space-y-4 mt-10 bg-neutral-50 dark:bg-neutral-800 rounded-md p-4 shadow dark:shadow">
             <div class="flex gap-x-2 items-center">
-                <textarea id="user-input" rows="1" placeholder="Message JW AI"
+                <textarea id="user-input" rows="1" placeholder="Message JW CH.AT"
                     class="p-2 bg-neutral-100 dark:bg-neutral-700 text-gray-900 dark:text-gray-100 rounded-md flex-1"
                     style="resize: none; overflow: hidden;"
                     oninput="this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px';"></textarea>
@@ -58,150 +59,12 @@
                     </svg>
                 </button>
             </div>
-            <span class="text-xs text-gray-500">JW AI peut faire des erreurs. Envisagez de vérifier les informations importantes.</span>
+            <span class="text-xs text-gray-500">JW CH.AT peut faire des erreurs. Envisagez de vérifier les informations importantes.</span>
         </form>
     </div>
 
-    <script>
-        const socket = io();
-        var thread_id = 0;
 
-        var startedMessaging = false;
-        var assistantMessageSection = null;
-
-        const userTemplate = document.getElementById("user-template");
-        const assistantTemplate = document.getElementById("assistant-template");
-        const status = document.getElementById("status");
-
-        document.getElementById("question-form").onsubmit = function (event) {
-            event.preventDefault();
-            const userInput = document.getElementById("user-input").value;
-
-            // Envoie la question via WebSocket
-            if (thread_id == 0) {
-                socket.emit('ask_openai', { user_input: userInput });
-            } else {
-                socket.emit('ask_openai', { user_input: userInput, thread_id: thread_id });
-            }
-
-            const userMessage = userTemplate.cloneNode(true);
-            userMessage.classList.remove('hidden');
-            userMessage.querySelector('div').innerText = userInput;
-            document.getElementById("response").appendChild(userMessage);
-
-            window.scrollTo(0, document.body.scrollHeight);
-            document.getElementById("user-input").value = "";
-        };
-    
-        // Écoute les réponses de l'API
-        socket.on('response', function (data) {
-            console.log(data);
-
-            if ("thread_id" in data) {
-                thread_id = data.thread_id;
-            }
-
-            if ("message" in data) {
-                if (startedMessaging == false) {                   
-                    assistantMessageSection = assistantTemplate.cloneNode(true);
-                    document.getElementById("response").appendChild(assistantMessageSection);
-                    startedMessaging = true;
-                }
-
-                var message_text = assistantMessageSection.querySelector('div').innerHTML += data.message;
-
-                // Update the message when ** is found, measing between must be in bold
-                if (message_text.includes("**")) {
-                    message_text = message_text.replace(/\*\*(.*?)\*\*/g, "<b class='font-bold'>$1</b>");
-                }
-
-                // Garder les sauts de ligne
-                message_text = message_text.replace(/\n/g, "<br>");
-
-                assistantMessageSection.classList.remove('hidden');
-                assistantMessageSection.querySelector('div').innerHTML = message_text;
-
-                // scroll to the bottom of document
-                window.scrollTo(0, document.body.scrollHeight);
-            }
-
-            if ("article" in data) {
-                // article contains the url, title, and image of the article to put on the left side of the message
-                const article = data.article;
-                const articleElement = document.createElement('a');
-                articleElement.classList.add('flex', 'flex-row', 'gap-2', 'w-full', 'mt-2');
-                articleElement.href = article.url;
-                articleElement.target = "_blank";
-                articleElement.innerHTML = "<img src='" + article.image + "' class='w-16 h-16 rounded-md'>";
-                articleElement.innerHTML += "<div class='flex flex-col w-full bg-neutral-200 dark:bg-neutral-800 text-gray-900 dark:text-gray-100 p-2 rounded-md'><a href='" + article.url + "' target='_blank'>" + article.title + "</a></div>";
-                document.getElementById("response").appendChild(articleElement);
-            }
-
-            if ("sources" in data) {
-                if (data.sources.length == 0) {
-                    return;
-                }
-
-                last_message = document.getElementById("response").lastChild.querySelector('div');
-                last_message.innerHTML = data.completed_message;
-
-                last_message.innerHTML += "<br><br><b>Source(s):</b><br>";
-
-                for (var i = 0; i < data.sources.length; i++) {
-                    last_message.innerHTML += "<a href='" + data.sources[i].url + "' target='_blank'>" + data.sources[i].title + "</a><br>";
-                }
-            }
-
-            if ("error" in data) {
-                console.log(data);
-                const errorMessage = assistantTemplate.cloneNode(true);
-                errorMessage.classList.remove('hidden');
-                errorMessage.querySelector('div').innerText = data.error;
-                errorMessage.style.color = "red";
-                document.getElementById("response").appendChild(errorMessage);
-            }
-            
-            if ("status" in data) {
-                console.log(data);
-
-                if (data.status == "end") {
-                    startedMessaging = false;
-                    status.innerText = "";
-                }
-
-                if (data.status == "in_progress") {
-                    status.innerText = "...";
-                }
-
-                if (data.status == "completed") {
-                    status.innerText = "";
-                }
-
-                if (data.status == "source_search") {
-                    status.innerText = "Recherche en cours...";
-                }
-
-                if (data.status == "function_call") {
-                    status.innerText = "Recherche sur JW.ORG...";
-                }
-
-                if (data.status == "search_jw_org") {
-                    console.log(data);
-                }
-            }
-        });
-
-        document.addEventListener('DOMContentLoaded', function () {
-            document.getElementById("user-input").focus();
-        });
-
-        document.getElementById("user-input").addEventListener('keydown', function (event) {
-            if (event.key === "Enter" && !event.shiftKey) {
-                event.preventDefault();
-                document.getElementById("question-form").dispatchEvent(new Event('submit'));
-            }
-        }); 
-    </script>
+    <script src="/static/js/jw-chat.js"></script>
 </body>
 
 </html>
