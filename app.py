@@ -59,6 +59,15 @@ def register():
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
+        confirm_password = request.form['confirm_password']
+        rgpd_accept = request.form.get('rgpd_accept')
+
+        if password != confirm_password:
+            return render_template('register.html', error="Les mots de passe ne correspondent pas.")
+
+        if not rgpd_accept:
+            return render_template('register.html', error="Vous devez accepter la politique de confidentialité et de protection des données.")
+
         hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
 
         user = {
@@ -69,7 +78,7 @@ def register():
 
         users_collection.insert_one(user)
         send_admin_notification(email, BREVO_API_KEY)
-        return "Votre inscription a été prise en compte. Un administrateur validera votre compte prochainement."
+        return render_template('confirmation.html', message="Votre inscription a été prise en compte. Un administrateur validera votre compte prochainement.")
 
     return render_template('register.html')
 
