@@ -16,6 +16,7 @@ from bson.objectid import ObjectId
 from openai import OpenAI
 
 from utils import eventhandler, email, db
+from utils.email import send_admin_notification
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "your_secret_key")
@@ -67,7 +68,7 @@ def register():
         }
 
         users_collection.insert_one(user)
-        email.send_admin_notification(email, BREVO_API_KEY)
+        send_admin_notification(email, BREVO_API_KEY)
         return "Votre inscription a été prise en compte. Un administrateur validera votre compte prochainement."
 
     return render_template('register.html')
