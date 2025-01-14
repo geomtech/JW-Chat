@@ -11,6 +11,12 @@
     <div class="relative container mx-auto max-w-3xl h-screen">    
         <h3 class="text-2xl font-bold mb-4 p-4">JW CH.AT</h3>
         
+        <div id="tabs" class="flex flex-row gap-2 p-4">
+            <button class="tab bg-neutral-200 dark:bg-neutral-800 text-gray-900 dark:text-gray-100 p-2 rounded-md" onclick="switchTab('tab1')">Chat 1</button>
+            <button class="tab bg-neutral-200 dark:bg-neutral-800 text-gray-900 dark:text-gray-100 p-2 rounded-md" onclick="switchTab('tab2')">Chat 2</button>
+            <button class="tab bg-neutral-200 dark:bg-neutral-800 text-gray-900 dark:text-gray-100 p-2 rounded-md" onclick="switchTab('tab3')">Chat 3</button>
+        </div>
+
         <div id="response" class="flex flex-col gap-4 mt-4 p-4">
             <div class="hidden flex flex-row gap-2 w-full" id="user-template">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"

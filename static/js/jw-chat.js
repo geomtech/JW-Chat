@@ -168,3 +168,37 @@ document.getElementById("user-input").addEventListener('keydown', function (even
         document.getElementById("question-form").dispatchEvent(new Event('submit'));
     }
 });
+
+// Handle the creation and switching of tabs
+function switchTab(tabId) {
+    // Hide all chat windows
+    const chatWindows = document.querySelectorAll('.chat-window');
+    chatWindows.forEach(window => window.classList.add('hidden'));
+
+    // Show the selected chat window
+    const selectedChatWindow = document.getElementById(tabId);
+    selectedChatWindow.classList.remove('hidden');
+
+    // Update the thread_id to the selected chat window's thread_id
+    thread_id = selectedChatWindow.dataset.threadId;
+}
+
+// Ensure each tab has a unique session identifier
+function createNewTab() {
+    const newTabId = `tab${Date.now()}`;
+    const newTabButton = document.createElement('button');
+    newTabButton.classList.add('tab', 'bg-neutral-200', 'dark:bg-neutral-800', 'text-gray-900', 'dark:text-gray-100', 'p-2', 'rounded-md');
+    newTabButton.innerText = `Chat ${newTabId}`;
+    newTabButton.setAttribute('onclick', `switchTab('${newTabId}')`);
+
+    const tabsContainer = document.getElementById('tabs');
+    tabsContainer.appendChild(newTabButton);
+
+    const newChatWindow = document.createElement('div');
+    newChatWindow.id = newTabId;
+    newChatWindow.classList.add('chat-window', 'hidden');
+    newChatWindow.dataset.threadId = newTabId;
+
+    const responseContainer = document.getElementById('response');
+    responseContainer.appendChild(newChatWindow);
+}
