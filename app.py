@@ -30,10 +30,20 @@ def login():
 
     return render_template('login.html')
 
+@app.route('/rgpd', methods=['GET', 'POST'])
+def rgpd():
+    if request.method == 'POST':
+        session['rgpd_accepted'] = True
+        return redirect('/')
+    return render_template('rgpd.html')
+
 @app.route('/')
 def index():
     if 'is_logged' not in session:
         return redirect('/auth')
+    
+    if 'rgpd_accepted' not in session:
+        return redirect('/rgpd')
     
     thread_id = session.get('thread_id', None)
 
