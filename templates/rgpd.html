@@ -12,7 +12,7 @@
     <div class="bg-white dark:bg-neutral-800 p-8 rounded-lg shadow-lg w-full max-w-sm">
         <h2 class="text-2xl font-bold mb-6 text-center">RGPD</h2>
         <p class="mb-4">Pour continuer à utiliser notre application, veuillez accepter notre politique de confidentialité et de protection des données.</p>
-        <form method="POST">
+        <form method="POST" onsubmit="sessionStorage.setItem('rgpdAccepted', 'true');">
             <div class="mb-4">
                 <label for="rgpd_accept" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     <input type="checkbox" id="rgpd_accept" name="rgpd_accept" class="mr-2">
