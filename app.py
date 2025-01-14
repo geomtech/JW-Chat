@@ -8,27 +8,86 @@ import requests
 from bs4 import BeautifulSoup
 from flask import Flask, redirect, render_template, request, session
 from flask_socketio import SocketIO, emit
+from flask_bcrypt import Bcrypt
+from flask_mail import Mail, Message
+from pymongo import MongoClient
+from bson.objectid import ObjectId
 
 from openai import OpenAI
 
-from utils import eventhandler
+from utils import eventhandler, email, db
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "your_secret_key")
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
-OPEN_API_KEY = os.environ.get("OPENAI_API_KEY", "sk-proj...")
-openai_client = OpenAI(api_key=OPEN_API_KEY)
+bcrypt = Bcrypt(app)
+mail = Mail(app)
+
+MONGODB_URL = os.environ.get("MONGODB_URL", "mongodb://localhost:27017/")
+BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "your_brevo_api_key")
+
+client = MongoClient(MONGODB_URL)
+db = client['jw_chat']
+users_collection = db['users']
+
+openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", "sk-proj..."))
 openai_assistant_id = ""
 
 @app.route('/auth', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        if request.form['api_key'] == OPEN_API_KEY:
-            session['is_logged'] = True
-            session.permanent = True
-            return redirect('/')
+        email = request.form['email']
+        password = request.form['password']
+        user = users_collection.find_one({"email": email})
+
+        if user and bcrypt.check_password_hash(user['password'], password):
+            if user['is_active']:
+                session['is_logged'] = True
+                session['user_id'] = str(user['_id'])
+                session.permanent = True
+                return redirect('/')
+            else:
+                return "Votre compte n'a pas encore été validé par un administrateur."
+        else:
+            return "Adresse e-mail ou mot de passe incorrect."
 
     return render_template('login.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+
+        user = {
+            "email": email,
+            "password": hashed_password,
+            "is_active": False
+        }
+
+        users_collection.insert_one(user)
+        email.send_admin_notification(email, BREVO_API_KEY)
+        return "Votre inscription a été prise en compte. Un administrateur validera votre compte prochainement."
+
+    return render_template('register.html')
+
+@app.route('/admin', methods=['GET', 'POST'])
+def admin():
+    if 'is_logged' not in session:
+        return redirect('/auth')
+
+    user = users_collection.find_one({"_id": ObjectId(session['user_id'])})
+    if not user or not user.get('is_admin', False):
+        return "Accès refusé."
+
+    if request.method == 'POST':
+        user_id = request.form['user_id']
+        users_collection.update_one({"_id": ObjectId(user_id)}, {"$set": {"is_active": True}})
+        return redirect('/admin')
+
+    pending_users = users_collection.find({"is_active": False})
+    return render_template('admin.html', pending_users=pending_users)
 
 @app.route('/rgpd', methods=['GET', 'POST'])
 def rgpd():

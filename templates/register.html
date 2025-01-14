@@ -4,13 +4,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connexion</title>
+    <title>Inscription</title>
     <link rel="stylesheet" href="/static/css/jw-chat.css">
 </head>
 
 <body class="bg-neutral-100 dark:bg-neutral-900 text-gray-900 dark:text-gray-100 flex items-center justify-center h-screen">
     <div class="bg-white dark:bg-neutral-800 p-8 rounded-lg shadow-lg w-full max-w-sm">
-        <h2 class="text-2xl font-bold mb-6 text-center">Connexion</h2>
+        <h2 class="text-2xl font-bold mb-6 text-center">Inscription</h2>
         <form method="POST">
             <div class="mb-4">
                 <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Adresse e-mail</label>
@@ -21,11 +21,11 @@
                 <input type="password" id="password" name="password" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-neutral-700 border border-gray-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" required>
             </div>
             <div class="flex items-center justify-between">
-                <button type="submit" class="w-full bg-primary hover:bg-secondary text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Se connecter</button>
+                <button type="submit" class="w-full bg-primary hover:bg-secondary text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">S'inscrire</button>
             </div>
         </form>
         <div class="mt-4 text-center">
-            <a href="/register" class="text-sm text-primary hover:text-secondary">Créer un compte</a>
+            <a href="/auth" class="text-sm text-primary hover:text-secondary">Se connecter</a>
         </div>
     </div>
 </body>
