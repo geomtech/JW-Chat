@@ -73,7 +73,8 @@ def register():
         user = {
             "email": email,
             "password": hashed_password,
-            "is_active": False
+            "is_active": False,
+            "registration_date": time.strftime('%Y-%m-%d %H:%M:%S')
         }
 
         users_collection.insert_one(user)
@@ -93,26 +94,20 @@ def admin():
 
     if request.method == 'POST':
         user_id = request.form['user_id']
-        users_collection.update_one({"_id": ObjectId(user_id)}, {"$set": {"is_active": True}})
+        users_collection.update_one({"_id": ObjectId(user_id)}, {"$set": {"is_active": True, "validation_date": time.strftime('%Y-%m-%d %H:%M:%S')}})
         return redirect('/admin')
 
     pending_users = users_collection.find({"is_active": False})
     return render_template('admin.html', pending_users=pending_users)
 
-@app.route('/rgpd', methods=['GET', 'POST'])
-def rgpd():
-    if request.method == 'POST':
-        session['rgpd_accepted'] = True
-        return redirect('/')
-    return render_template('rgpd.html')
+@app.route('/data-privacy', methods=['GET'])
+def data_privacy():
+    return render_template('data-privacy.html')
 
 @app.route('/')
 def index():
     if 'is_logged' not in session:
         return redirect('/auth')
-    
-    if 'rgpd_accepted' not in session:
-        return redirect('/rgpd')
     
     thread_id = session.get('thread_id', None)
 
