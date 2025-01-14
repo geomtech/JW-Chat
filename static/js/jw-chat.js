@@ -156,9 +156,6 @@ socket.on('response', function (data) {
 });
 
 document.addEventListener('DOMContentLoaded', function () {
-    if (!sessionStorage.getItem('rgpdAccepted')) {
-        window.location.href = '/rgpd';
-    }
     document.getElementById("user-input").focus();
 });
 
