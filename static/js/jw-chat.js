@@ -40,7 +40,7 @@ function formatMessage(message) {
     message = message.replace(/^##### (.+)$/gm, "<h5>$1</h5>");
     message = message.replace(/^#### (.+)$/gm, "<h4>$1</h4>");
     message = message.replace(/^### (.+)$/gm, "<h3>$1</h3>");
-    message = message.replace(/^## (.+)$/gm, "<h2>$1</h2>");
+    message = message.replace(/^## (.+)$/gm, "<h2>$1</2>");
     message = message.replace(/^# (.+)$/gm, "<h1>$1</h1>");
 
     // Gérer les listes numérotées (ex: "1. Texte")
@@ -199,3 +199,15 @@ function createNewTab() {
     const responseContainer = document.getElementById('response');
     responseContainer.appendChild(newChatWindow);
 }
+
+// Add functionality to collapse/expand the chat list
+document.getElementById("collapse-button").addEventListener("click", function () {
+    const chatList = document.getElementById("chat-list");
+    if (chatList.style.display === "none") {
+        chatList.style.display = "block";
+        this.innerText = "Collapse";
+    } else {
+        chatList.style.display = "none";
+        this.innerText = "Expand";
+    }
+});
