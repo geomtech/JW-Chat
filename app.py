@@ -141,7 +141,11 @@ def handle_ask_openai(data):
 
             new_thread = None
             if thread_id:
-                new_thread = openai_client.beta.threads.retrieve(thread_id=thread_id)
+                try:
+                    new_thread = openai_client.beta.threads.retrieve(thread_id=thread_id)
+                except Exception as e:
+                    socketio.emit('response', {'error': f"Thread ID not found: {str(e)}"})
+                    return
             else:
                 new_thread = openai_client.beta.threads.create()
 
