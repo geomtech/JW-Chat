@@ -178,6 +178,11 @@ function switchTab(tabId) {
 
     // Update the thread_id to the selected chat window's thread_id
     thread_id = selectedChatWindow.dataset.threadId;
+
+    // Ensure the thread_id is valid
+    if (!thread_id || thread_id === "0") {
+        thread_id = null;
+    }
 }
 
 // Ensure each tab has a unique session identifier
@@ -198,16 +203,7 @@ function createNewTab() {
 
     const responseContainer = document.getElementById('response');
     responseContainer.appendChild(newChatWindow);
-}
 
-// Add functionality to collapse/expand the chat list
-document.getElementById("collapse-button").addEventListener("click", function () {
-    const chatList = document.getElementById("chat-list");
-    if (chatList.style.display === "none") {
-        chatList.style.display = "block";
-        this.innerText = "Collapse";
-    } else {
-        chatList.style.display = "none";
-        this.innerText = "Expand";
-    }
-});
+    // Set the thread_id to the new tab's ID
+    thread_id = newTabId;
+}
