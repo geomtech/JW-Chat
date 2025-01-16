@@ -1,0 +1,19 @@
+#chat-list {
+    width: 250px;
+    background-color: #f0f0f0;
+    padding: 10px;
+    overflow-y: auto;
+}
+
+#collapse-button {
+    background-color: #3874CB;
+    color: white;
+    border: none;
+    padding: 10px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+#collapse-button:hover {
+    background-color: #4994EC;
+}
