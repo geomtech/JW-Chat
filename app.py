@@ -115,18 +115,6 @@ def index():
     if 'is_logged' not in session:
         return redirect('/auth')
     
-    thread_id = session.get('thread_id', None)
-
-    if thread_id:
-        thread_found = openai_client.beta.threads.retrieve(thread_id=thread_id)
-
-        if thread_found:
-            messages = openai_client.beta.threads.messages.list(thread_id=thread_id)
-            messages = messages.data
-
-            for message in messages:
-                if message.role == "user":
-                    print(f"\nuser > {message.content}\n", flush=True)
     return render_template('index.html')
 
 
@@ -137,8 +125,7 @@ def handle_ask_openai(data):
     else:
         try:
             prompt = data.get("user_input")
-            thread_id = data.get("thread_id", None)
-            chat_id = data.get("chat_id", None)
+            thread_id = session.get("thread_id", None)
 
             assistants = openai_client.beta.assistants.list()
             openai_assistant_id = str(assistants.data[0].id)
@@ -155,7 +142,7 @@ def handle_ask_openai(data):
             else:
                 new_thread = openai_client.beta.threads.create()
 
-            socketio.emit('response', {'thread_id': f"{new_thread.id}", 'chat_id': chat_id})
+            socketio.emit('response', {'thread_id': f"{new_thread.id}"})
             session['thread_id'] = str(new_thread.id)
             
             openai_client.beta.threads.messages.create(thread_id=new_thread.id, role="user", content=prompt)
