@@ -14,7 +14,7 @@
         <form method="POST">
             <div class="mb-4">
                 <label for="user_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">User ID</label>
-                <input type="text" id="user_id" name="user_id" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-neutral-700 border border-gray-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" required>
+                <input type="text" autocomplete="off" id="user_id" name="user_id" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-neutral-700 border border-gray-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" required>
             </div>
             <div class="flex items-center justify-between">
                 <button type="submit" class="w-full bg-primary hover:bg-secondary text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Validate Account</button>
@@ -25,12 +25,18 @@
             <ul>
                 {% for user in pending_users %}
                 <li class="mb-2">
-                    <span class="text-sm text-gray-700 dark:text-gray-300">{{ user.email }}</span>
+                    <button type="button" class="bg-primary hover:bg-secondary text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" onclick="validateUser('{{ user._id }}')">{{ user.email }}</button>
                 </li>
                 {% endfor %}
             </ul>
         </div>
     </div>
+
+    <script>
+        function validateUser(userId) {
+            document.getElementById('user_id').value = userId;
+        }
+    </script>
 </body>
 
 </html>

@@ -54,9 +54,9 @@ def login():
                 session.permanent = True
                 return redirect('/')
             else:
-                return "Votre compte n'a pas encore été validé par un administrateur."
+                return render_template('message.html', message="Votre compte n'a pas encore été validé par un administrateur.")
         else:
-            return "Adresse e-mail ou mot de passe incorrect."
+            return render_template('message.html', message="Identifiants incorrects.")
 
     return render_template('login.html')
 
@@ -85,7 +85,7 @@ def register():
 
         users_collection.insert_one(user)
         send_admin_notification(email, BREVO_API_KEY)
-        return render_template('confirmation.html', message="Votre inscription a été prise en compte. Un administrateur validera votre compte prochainement.")
+        return render_template('message.html', message="Votre inscription a été prise en compte. Un administrateur validera votre compte prochainement.")
 
     return render_template('register.html')
 
@@ -116,6 +116,12 @@ def index():
         return redirect('/auth')
     
     return render_template('index.html')
+
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect('/auth')
 
 
 @socketio.on('ask_openai')
