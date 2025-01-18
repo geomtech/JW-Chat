@@ -1,0 +1,21 @@
+{
+    "name": "JW CH.AT",
+    "short_name": "JW CH.AT",
+    "description": "AI powered chatbot for JW.ORG",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#171717",
+    "icons": [
+        {
+            "src": "/static/icons/icon-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/static/icons/icon-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

@@ -10,4 +10,3 @@ def get_publication(reference):
         return 'Réveillez-vous !'
     else:
         return 'Autre publication (' + reference + ')'
-    

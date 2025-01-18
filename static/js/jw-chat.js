@@ -3,6 +3,7 @@ var thread_id = 0;
 
 var startedMessaging = false;
 var assistantMessageSection = null;
+var markdownMessage = null;
 
 const userTemplate = document.getElementById("user-template");
 const assistantTemplate = document.getElementById("assistant-template");
@@ -10,7 +11,12 @@ const statusElement = document.getElementById("status");
 
 document.getElementById("question-form").onsubmit = function (event) {
     event.preventDefault();
-    const userInput = document.getElementById("user-input").value;
+    const userInput = document.getElementById("user-input").innerText;
+
+    if (userInput.trim() == "") {
+        alert("Vous ne pouvez pas envoyer un message vide.", "error");
+        return;
+    }
 
     // Envoie la question via WebSocket
     if (thread_id == 0) {
@@ -25,57 +31,28 @@ document.getElementById("question-form").onsubmit = function (event) {
     document.getElementById("response").appendChild(userMessage);
 
     window.scrollTo(0, document.body.scrollHeight);
-    document.getElementById("user-input").value = "";
+    document.getElementById("user-input").innerText = "";
+    placeholderUpdate();
 };
-
-function formatMessage(message) {
-    // Transformer les textes entre ** en gras (y compris les numéros et suffixes comme ':')
-    message = message.replace(/(\d+\.\s)?\*\*(.*?)\s*\*\*\s*:/g, (match, prefix = "", boldText) => {
-        // Inclure le numéro et ":" dans la balise <b>, en supprimant les espaces autour du texte
-        return `<b class="font-bold">${(prefix || "")}${boldText.trim()} :</b>`;
-    });
-
-    // Traiter les niveaux de titres Markdown
-    message = message.replace(/^###### (.+)$/gm, "<h6>$1</h6>");
-    message = message.replace(/^##### (.+)$/gm, "<h5>$1</h5>");
-    message = message.replace(/^#### (.+)$/gm, "<h4>$1</h4>");
-    message = message.replace(/^### (.+)$/gm, "<h3>$1</h3>");
-    message = message.replace(/^## (.+)$/gm, "<h2>$1</2>");
-    message = message.replace(/^# (.+)$/gm, "<h1>$1</h1>");
-
-    // Gérer les listes numérotées (ex: "1. Texte")
-    message = message.replace(/^(\d+)\.\s+(.+)$/gm, "<li>$2</li>");
-
-    // Ajouter des sauts de ligne en <br>
-    message = message.replace(/\n/g, "<br>");
-
-    // Remettre les <li> dans des balises <ul> pour des listes bien formées
-    message = message.replace(/(<li>.*?<\/li>)/g, "<ul>$1</ul>");
-
-    return message;
-}
 
 // Écoute les réponses de l'API
 socket.on('response', function (data) {
-    console.log(data);
-
     if ("thread_id" in data) {
         thread_id = data.thread_id;
     }
 
     if ("message" in data) {
         if (startedMessaging == false) {
+            markdownMessage = "";
             assistantMessageSection = assistantTemplate.cloneNode(true);
             document.getElementById("response").appendChild(assistantMessageSection);
             startedMessaging = true;
         }
 
-        var message_text = assistantMessageSection.querySelector('div').innerHTML += data.message;
-
-        message_text = formatMessage(message_text);
+        markdownMessage = markdownMessage += data.message;
 
         assistantMessageSection.classList.remove('hidden');
-        assistantMessageSection.querySelector('div').innerHTML = message_text;
+        assistantMessageSection.querySelector('.response').innerHTML = marked.parse(markdownMessage);
 
         // scroll to the bottom of document
         window.scrollTo(0, document.body.scrollHeight);
@@ -90,7 +67,7 @@ socket.on('response', function (data) {
         articleElement.target = "_blank";
         articleElement.innerHTML = "<img src='" + article.image + "' class='w-10 h-10 rounded-md'>";
         articleElement.innerHTML += "<span>" + article.title + "</span>";
-        document.getElementById("response").lastChild.querySelector('div').appendChild(articleElement);
+        document.getElementById("response").lastChild.querySelector('.links').appendChild(articleElement);
     }
 
     if ("pub" in data) {
@@ -102,7 +79,7 @@ socket.on('response', function (data) {
         pubElement.target = "_blank";
         pubElement.innerHTML = "<img src='" + pub.image + "' class='w-10 h-10 rounded-md'>";
         pubElement.innerHTML += "<span>" + pub.title + "</span>";
-        document.getElementById("response").lastChild.querySelector('div').appendChild(pubElement);
+        document.getElementById("response").lastChild.querySelector('.links').appendChild(pubElement);
     }
 
     if ("sources" in data) {
@@ -134,13 +111,6 @@ socket.on('response', function (data) {
         if (data.status == "end") {
             startedMessaging = false;
             statusElement.innerText = "";
-
-            // Format every messages
-            for (var i = 0; i < document.getElementById("response").children.length; i++) {
-                var message = document.getElementById("response").children[i].querySelector('div').innerHTML;
-                message = formatMessage(message);
-                document.getElementById("response").children[i].querySelector('div').innerHTML = message;
-            }
         } else if (data.status == "in_progress") {
             statusElement.innerText = "...";
         } else if (data.status == "completed") {
@@ -148,7 +118,7 @@ socket.on('response', function (data) {
         } else if (data.status == "source_search") {
             statusElement.innerText = "Recherche d'informations dans la bibliothèque...";
         } else if (data.status == "function_call") {
-            statusElement.innerText = "Recherche d'informations sur JW.ORG ou la Bibliothèque en ligne...";
+            statusElement.innerText = "Recherche d'informations sur JW.ORG et WOL...";
         } else {
             statusElement.innerText = data.status;
         }
@@ -163,5 +133,36 @@ document.getElementById("user-input").addEventListener('keydown', function (even
     if (event.key === "Enter" && !event.shiftKey) {
         event.preventDefault();
         document.getElementById("question-form").dispatchEvent(new Event('submit'));
+
+        // restore the height of the textarea
+        this.style.height = 'auto';
     }
+});
+
+function placeholderUpdate() {
+    if (document.getElementById("user-input").innerText == "") {
+        document.getElementById("user-input-placeholder").innerText = "Message JW CH.AT";
+    } else {
+        document.getElementById("user-input-placeholder").innerText = "";
+    }
+}
+
+document.getElementById("user-input").addEventListener('input', function () {
+    placeholderUpdate();
+});
+
+document.getElementById("user-input").addEventListener('touchstart', function () {
+    this.focus();
+});
+
+document.getElementById("user-input-placeholder").addEventListener('touchstart', function () {
+    document.getElementById("user-input").focus();
+});
+
+document.getElementById("user-input").addEventListener('blur', function () {
+    window.scrollTo(0, document.body.scrollHeight);
+});
+
+document.getElementById("question-form").addEventListener('submit', function () {
+    document.getElementById("user-input").blur();
 });

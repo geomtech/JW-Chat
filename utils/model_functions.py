@@ -5,8 +5,6 @@ from utils.eventhandler import EventHandler
 
 
 def search_jw_org(openai_client, self, tool_call, socketio):
-    print(f"\nassistant > search_jw_org function OK\n", flush=True)
-
     articles_urls = []
 
     query = json.loads(tool_call.function.arguments)['query']
@@ -25,7 +23,7 @@ def search_jw_org(openai_client, self, tool_call, socketio):
         results = r.get("results", [])
 
         if len(results) > 0:
-            socketio.emit('response', {'status': f"{len(results)} résultats sur JW.ORG, réflexion en cours..."})
+            socketio.emit('response', {'status': f"{len(results)} résultats sur JW.ORG, récupérations des articles..."})
         
         for result in results:
             label = result.get("label", None)
@@ -75,8 +73,6 @@ def search_jw_org(openai_client, self, tool_call, socketio):
 
         self.output = str(output)
 
-        print(f"\nassistant > {self.output}\n", flush=True)
-
         with openai_client.beta.threads.runs.submit_tool_outputs_stream(
             thread_id=self.thread_id,
             run_id=self.run_id,
@@ -113,9 +109,8 @@ def search_jw_org(openai_client, self, tool_call, socketio):
             stream.until_done()
 
 def fetch_jw_content(openai_client, self, tool_call, socketio):
-    print(json.loads(tool_call.function.arguments))
+    socketio.emit('response', {'status': "Lecture et réflexion en cours..."})
 
-    
     jw_url = json.loads(tool_call.function.arguments)['url']
     
     headers = {
@@ -143,8 +138,6 @@ def fetch_jw_content(openai_client, self, tool_call, socketio):
     }
 
     self.output = str(output)
-
-    print(f"\nassistant > {self.output}\n", flush=True)
 
     with openai_client.beta.threads.runs.submit_tool_outputs_stream(
             thread_id=self.thread_id,

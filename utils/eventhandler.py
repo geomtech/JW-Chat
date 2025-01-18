@@ -22,8 +22,6 @@ class EventHandler(AssistantEventHandler):
         self.socketio = socketio
         self.openai_client = openai_client
 
-        print(f"init > {self.thread_id} - {self.assistant_id}", flush=True)
-
     @override
     def on_text_delta(self, delta, snapshot):
         if self.tool_id == None:
@@ -89,7 +87,6 @@ class EventHandler(AssistantEventHandler):
         elif tool_call.type == "function":
             self.function_name = tool_call.function.name
             self.socketio.emit('response', {'status': "function_call"})
-            print(f"\nassistant > {tool_call.function.name}\n", flush=True)
 
             keep_retrieving_run = self.openai_client.beta.threads.runs.retrieve(
                 thread_id=self.thread_id,
@@ -119,11 +116,7 @@ class EventHandler(AssistantEventHandler):
                 elif tool_call.function.name == "fetch_jw_content":
                     model_functions.fetch_jw_content(self.openai_client, self, tool_call, self.socketio)
             elif tool_call.type == "file_search":
-                self.socketio.emit('response', {'message': "Je vais chercher dans mes fichiers..."})
-
-                print("file_search", tool_call.id)
-
-                self.output = "Searching files..."  # Define self.output before using it
+                self.output = "Recherche dans les fichiers..."  # Define self.output before using it
 
                 with self.openai_client.beta.threads.runs.submit_tool_outputs_stream(
                         thread_id=self.thread_id,
