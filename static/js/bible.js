@@ -1,8 +1,3 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const message = "Philippiens 4:5";
-    console.log(bible_handler(message));
-});
-
 function bible_book_id(book) {
 
     const books = {
