@@ -1,4 +1,5 @@
 import json
+import concurrent.futures
 import requests
 from bs4 import BeautifulSoup
 from utils.eventhandler import EventHandler
@@ -14,25 +15,25 @@ def search_jw_org(openai_client, self, tool_call, socketio):
     bearer_token = get_bearer_token.text
 
     print(f"\nassistant > '{query}' on JW.ORG\n", flush=True)
+    socketio.emit('response', {'status': f"Recherche de '{query}' via l'API JW.ORG..."})
 
-    jw_url = f"https://b.jw-cdn.org/apis/search/results/F/all?q={str(query)}"
+    jw_url = f"https://b.jw-cdn.org/apis/search/results/F/all?q={str(query)}&limit=5"
 
     try:
         r = requests.get(jw_url, headers={"Authorization": f"Bearer {bearer_token}"})
         r = r.json()
 
         results = r.get("results", [])
-
-        if len(results) > 0:
-            socketio.emit('response', {'status': f"{len(results)} résultats sur JW.ORG, récupérations des articles..."})
         
         for result in results:
             label = result.get("label", None)
 
             if label == "Vidéos":
+                socketio.emit('response', {'status': "Analyse des vidéos en cours..."})
                 pass
 
             if label == "Rubriques de l'Index":
+                socketio.emit('response', {'status': "Analyse des rubriques de l'index en cours..."})
                 pass
             
             if label == None:
@@ -40,8 +41,6 @@ def search_jw_org(openai_client, self, tool_call, socketio):
                 for result_in_result in results_in_result:
                     if result_in_result.get("subtype", None) == "article":
                         links = result_in_result.get("links", None)
-
-                        print(links)
 
                         if links.get("jw.org"):
                             url = links.get("jw.org")
@@ -57,41 +56,28 @@ def search_jw_org(openai_client, self, tool_call, socketio):
     except Exception as e:
         print(f"\error search_jw_org > {str(e)}\n", flush=True)
 
-    print(f"\nassistant > {len(articles_urls)} articles on JW.ORG\n", flush=True)
-    print(f"\nassistant > {len(wol_articles_urls)} articles on WOL\n", flush=True)
+    socketio.emit('response', {'status': f"{len(articles_urls)} articles trouvés sur JW.ORG et {len(wol_articles_urls)} articles trouvés sur la Bibliothèque en ligne."})
 
     if len(articles_urls) > 0 or len(wol_articles_urls) > 0:
-        output = []
-        sources = []
-
         headers = {
             "Accept": "text/html",
             # Add a user agent to mimic a web browser
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         }
 
-        for article in articles_urls:
-            article = requests.get(article, headers=headers)
-            article_content = BeautifulSoup(article.text, 'html.parser')
-
-            article_text = article_content.find('div', class_='contentBody').get_text()
+        def fetch_article_content(url, headers, content_class):
+            response = requests.get(url, headers=headers)
+            article_content = BeautifulSoup(response.text, 'html.parser')
+            article_text = article_content.find('div', class_=content_class).get_text()
             article_title = article_content.title.string
+            return article_title, article_text
+        
+        output = []
+        sources = []
 
-            print(article_title)
-
-            #jw_doc_id = article.split("docid=")[-1].split("&")[0]
-            #jw_article_image = f"https://cms-imgp.jw-cdn.org/img/p/{jw_doc_id}/univ/art/{jw_doc_id}_univ_sqs_lg.jpg"
-
-            #jw_article_image_valid = requests.get(jw_article_image)
-            #if jw_article_image_valid.status_code != 200:
-            #    jw_article_image = "/static/img/article.png"
-
-            sources.append({
-                "url": article,
-                "title": article_title,
-                #"image": jw_article_image
-            })
-
+        # Process articles from articles_urls
+        for article in articles_urls:
+            article_title, article_text = fetch_article_content(article, headers, 'contentBody')
             output.append({
                 "context": "JW.ORG",
                 "title": article_title,
@@ -99,21 +85,9 @@ def search_jw_org(openai_client, self, tool_call, socketio):
                 "url": article
             })
 
+        # Process articles from wol_articles_urls
         for article in wol_articles_urls:
-            article = requests.get(article, headers=headers)
-            article_content = BeautifulSoup(article.text, 'html.parser')
-
-            article_text = article_content.find('div', class_='content').get_text()
-            article_title = article_content.title.string
-
-            jw_article_image = "/static/img/article.png"
-
-            sources.append({
-                "url": article,
-                "title": article_title,
-                "image": jw_article_image
-            })
-
+            article_title, article_text = fetch_article_content(article, headers, 'content')
             output.append({
                 "context": "Bibliothèque en ligne",
                 "title": article_title,
@@ -121,19 +95,40 @@ def search_jw_org(openai_client, self, tool_call, socketio):
                 "url": article
             })
 
+        for article in output:
+            jw_doc_id = article['url'].split("docid=")[-1].split("&")
+            jw_article_image = f"https://cms-imgp.jw-cdn.org/img/p/{jw_doc_id}/univ/art/{jw_doc_id}_univ_sqs_lg.jpg"
+
+            jw_article_image_valid = requests.head(jw_article_image)
+            if jw_article_image_valid.status_code != 200:
+                jw_article_image = "/static/img/article.png"
+
+            sources.append({
+                "url": article,
+                "title": article_title,
+                "image": jw_article_image
+            })
+
         self.output = str(output[0])
 
-        with openai_client.beta.threads.runs.submit_tool_outputs_stream(
-            thread_id=self.thread_id,
-            run_id=self.run_id,
-            tool_outputs=[{
-                "tool_call_id": tool_call.id,
-                "output": self.output,
-            }],
-            event_handler=EventHandler(self.openai_client, self.thread_id, self.assistant_id, socketio)
-        ) as stream:
-            stream.until_done()
+        def chunk_data(data, chunk_size=5000):
+            for i in range(0, len(data), chunk_size):
+                yield data[i:i + chunk_size]
 
+        chunks = list(chunk_data(self.output))
+        for chunk in chunks:
+            with openai_client.beta.threads.runs.submit_tool_outputs_stream(
+                thread_id=self.thread_id,
+                run_id=self.run_id,
+                tool_outputs=[{
+                    "tool_call_id": tool_call.id,
+                    "output": chunk,
+                }],
+                event_handler=EventHandler(self.openai_client, self.thread_id, self.assistant_id, socketio)
+            ) as stream:
+                stream.until_done()
+
+        print(sources)
         socketio.emit('response', {'article': sources})
     else:
         with openai_client.beta.threads.runs.submit_tool_outputs_stream(
