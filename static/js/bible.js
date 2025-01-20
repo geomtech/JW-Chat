@@ -56,6 +56,8 @@ function bible_book_id(book) {
         "2th": 53,
         "1ti": 54,
         "2ti": 55,
+        "1tm": 54,
+        "2tm": 55,
         "tit": 56,
         "phi": 57,
         "héb": 58,

@@ -6,10 +6,8 @@ from utils.eventhandler import EventHandler
 
 
 def search_jw_org(openai_client, self, tool_call, socketio):
-    articles_urls = []
-    wol_articles_urls = []
-
     query = json.loads(tool_call.function.arguments)['query']
+    question = json.loads(tool_call.function.arguments)['question']
 
     get_bearer_token = requests.get("https://b.jw-cdn.org/tokens/jworg.jwt")
     bearer_token = get_bearer_token.text
@@ -24,6 +22,7 @@ def search_jw_org(openai_client, self, tool_call, socketio):
         r = r.json()
 
         results = r.get("results", [])
+        results_output = []
         
         for result in results:
             label = result.get("label", None)
@@ -42,110 +41,109 @@ def search_jw_org(openai_client, self, tool_call, socketio):
                     if result_in_result.get("subtype", None) == "article":
                         links = result_in_result.get("links", None)
 
-                        if links.get("jw.org"):
-                            url = links.get("jw.org")
-                            if url:
-                                articles_urls.append(url)
-                                continue
-                        else:
-                            if links.get("wol"):
-                                url = links.get("wol")
-                                if url:
-                                    wol_articles_urls.append(url)
+                        url = links.get("jw.org") or links.get("wol")
 
-    except Exception as e:
-        print(f"\error search_jw_org > {str(e)}\n", flush=True)
+                        if "wol" in links:
+                            results_output.append({
+                                "context": result_in_result.get("context", None),
+                                "source": "Bibliothèque en ligne",
+                                "url": url,
+                                "title": result_in_result.get("title", None),
+                                "snippet": result_in_result.get("snippet", None)
+                            })
+                        elif "jw.org" in links:
+                            results_output.append({
+                                "context": result_in_result.get("context", None),
+                                "source": "Bibliothèque JW.ORG",
+                                "url": url,
+                                "title": result_in_result.get("title", None),
+                                "snippet": result_in_result.get("snippet", None)
+                            })
 
-    socketio.emit('response', {'status': f"{len(articles_urls)} articles trouvés sur JW.ORG et {len(wol_articles_urls)} articles trouvés sur la Bibliothèque en ligne."})
+        if len(results_output) > 0:
+            self.output = str(results_output)
 
-    if len(articles_urls) > 0 or len(wol_articles_urls) > 0:
-        headers = {
-            "Accept": "text/html",
-            # Add a user agent to mimic a web browser
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        }
+            completion = openai_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "system", 
+                        "content": "Tu es un assistant pour les Témoins de Jéhovah souhaitant avoir des réponses à des recherches sur la Bible"
+                    },
+                    {
+                        "role": "developer",
+                        "content": f"Voici les résultats de la recherche '{query}' sur JW.ORG :"
+                    },
+                    {
+                        "role": "developer",
+                        "content": self.output
+                    },
+                    {
+                        "role": "assistant",
+                        "content": "Quel est l'article le plus pertinent pour la question suivante : '" + question + "' ?"
+                    }
+                ],
+                response_format={
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "result_schema",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "url": {
+                                    "description": "L'URL de l'article le plus pertinent",
+                                    "type": "string"
+                                },
+                                "additionalProperties": False
+                            }
+                        }
+                    }
+                }
+            )
 
-        def fetch_article_content(url, headers, content_class):
-            response = requests.get(url, headers=headers)
-            article_content = BeautifulSoup(response.text, 'html.parser')
-            article_text = article_content.find('div', class_=content_class).get_text()
-            article_title = article_content.title.string
-            return article_title, article_text
-        
-        output = []
-        sources = []
+            self.output = completion.choices[0].message.content
 
-        # Process articles from articles_urls
-        for article in articles_urls:
-            article_title, article_text = fetch_article_content(article, headers, 'contentBody')
-            output.append({
-                "context": "JW.ORG",
-                "title": article_title,
-                "content": article_text,
-                "url": article
-            })
+            try:
+                self.output = json.loads(self.output)["url"]
+            except:
+                self.output = "Aucun résultat"
+        else:
+            self.output = "Aucun résultat"
 
-        # Process articles from wol_articles_urls
-        for article in wol_articles_urls:
-            article_title, article_text = fetch_article_content(article, headers, 'content')
-            output.append({
-                "context": "Bibliothèque en ligne",
-                "title": article_title,
-                "content": article_text,
-                "url": article
-            })
+        print(f"\nassistant > {self.output}\n", flush=True)
 
-        for article in output:
-            jw_doc_id = article['url'].split("docid=")[-1].split("&")
-            jw_article_image = f"https://cms-imgp.jw-cdn.org/img/p/{jw_doc_id}/univ/art/{jw_doc_id}_univ_sqs_lg.jpg"
-
-            jw_article_image_valid = requests.head(jw_article_image)
-            if jw_article_image_valid.status_code != 200:
-                jw_article_image = "/static/img/article.png"
-
-            sources.append({
-                "url": article,
-                "title": article_title,
-                "image": jw_article_image
-            })
-
-        self.output = str(output[0])
-
-        def chunk_data(data, chunk_size=5000):
-            for i in range(0, len(data), chunk_size):
-                yield data[i:i + chunk_size]
-
-        chunks = list(chunk_data(self.output))
-        for chunk in chunks:
-            with openai_client.beta.threads.runs.submit_tool_outputs_stream(
-                thread_id=self.thread_id,
-                run_id=self.run_id,
-                tool_outputs=[{
-                    "tool_call_id": tool_call.id,
-                    "output": chunk,
-                }],
-                event_handler=EventHandler(self.openai_client, self.thread_id, self.assistant_id, socketio)
-            ) as stream:
-                stream.until_done()
-
-        print(sources)
-        socketio.emit('response', {'article': sources})
-    else:
         with openai_client.beta.threads.runs.submit_tool_outputs_stream(
             thread_id=self.thread_id,
             run_id=self.run_id,
             tool_outputs=[{
                 "tool_call_id": tool_call.id,
-                "output": "Aucun résultat",
+                "output": self.output,
+            }],
+            event_handler=EventHandler(self.openai_client, self.thread_id, self.assistant_id, socketio)
+        ) as stream:
+            stream.until_done()
+
+    except Exception as e:
+        print(f"\error search_jw_org > {str(e)}\n", flush=True)
+        self.output = "Une erreur a été rencontré lors de la récupération des résultats."
+
+        with openai_client.beta.threads.runs.submit_tool_outputs_stream(
+            thread_id=self.thread_id,
+            run_id=self.run_id,
+            tool_outputs=[{
+                "tool_call_id": tool_call.id,
+                "output": self.output,
             }],
             event_handler=EventHandler(self.openai_client, self.thread_id, self.assistant_id, socketio)
         ) as stream:
             stream.until_done()
 
 def fetch_jw_content(openai_client, self, tool_call, socketio):
+    print(f"\nassistant > Fetching JW.ORG content\n", flush=True)
     socketio.emit('response', {'status': "Lecture et réflexion en cours..."})
 
     jw_url = json.loads(tool_call.function.arguments)['url']
+    article_text = "Contenu non récupéré"
     
     headers = {
         "Accept": "text/html",
@@ -156,20 +154,21 @@ def fetch_jw_content(openai_client, self, tool_call, socketio):
     try:
         article = requests.get(jw_url, headers=headers)
         article_content = BeautifulSoup(article.text, 'html.parser')
-        article_text = article_content.find('div', class_='contentBody').get_text()
+
+        if "wol.jw.org" in jw_url:
+            article_text = article_content.find('div', class_='content').get_text()
+        else:
+            article_text = article_content.find('div', class_='contentBody').get_text()
     except Exception as e:
-        try:
-            article = requests.get(jw_url, headers=headers)
-            article_content = BeautifulSoup(article.text, 'html.parser')
-            article_text = article_content.get_text()
-        except Exception as e:
-            print(f"\nassistant > {str(e)}\n", flush=True)
-            self.output = "Je n'ai pas pu récupérer d'information."
+        print(f"\nassistant > {str(e)}\n", flush=True)
+        self.output = "Je n'ai pas pu récupérer le contenu de l'article."
 
     output = {            
         "url": jw_url,
         "content": article_text,
     }
+
+    print(output)
 
     self.output = str(output)
 
