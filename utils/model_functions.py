@@ -121,7 +121,7 @@ def search_jw_org(openai_client, self, tool_call, socketio):
                 "url": article
             })
 
-        self.output = str(output)
+        self.output = str(output[0])
 
         with openai_client.beta.threads.runs.submit_tool_outputs_stream(
             thread_id=self.thread_id,
