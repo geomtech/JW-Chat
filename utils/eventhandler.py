@@ -34,7 +34,6 @@ class EventHandler(AssistantEventHandler):
     @override
     def on_message_delta(self, delta, snapshot):
         if self.tool_id:
-            print(f"\non_message_delta > {delta.content[0].text}\n", flush=True)
             self.socketio.emit('response', {'message': delta.content[0].text.value})
 
     @override

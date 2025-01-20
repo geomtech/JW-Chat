@@ -6,6 +6,7 @@ from utils.eventhandler import EventHandler
 
 def search_jw_org(openai_client, self, tool_call, socketio):
     articles_urls = []
+    wol_articles_urls = []
 
     query = json.loads(tool_call.function.arguments)['query']
 
@@ -40,16 +41,28 @@ def search_jw_org(openai_client, self, tool_call, socketio):
                     if result_in_result.get("subtype", None) == "article":
                         links = result_in_result.get("links", None)
 
+                        print(links)
+
                         if links.get("jw.org"):
                             url = links.get("jw.org")
                             if url:
                                 articles_urls.append(url)
+                                continue
+                        else:
+                            if links.get("wol"):
+                                url = links.get("wol")
+                                if url:
+                                    wol_articles_urls.append(url)
 
     except Exception as e:
-        print(f"\nassistant > {str(e)}\n", flush=True)
+        print(f"\error search_jw_org > {str(e)}\n", flush=True)
 
-    if len(articles_urls) > 0:
+    print(f"\nassistant > {len(articles_urls)} articles on JW.ORG\n", flush=True)
+    print(f"\nassistant > {len(wol_articles_urls)} articles on WOL\n", flush=True)
+
+    if len(articles_urls) > 0 or len(wol_articles_urls) > 0:
         output = []
+        sources = []
 
         headers = {
             "Accept": "text/html",
@@ -57,19 +70,56 @@ def search_jw_org(openai_client, self, tool_call, socketio):
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         }
 
-        # get the first article
-        article_url = articles_urls[0]
-        article = requests.get(article_url, headers=headers)
-        article_content = BeautifulSoup(article.text, 'html.parser')
+        for article in articles_urls:
+            article = requests.get(article, headers=headers)
+            article_content = BeautifulSoup(article.text, 'html.parser')
 
-        article_text = article_content.find('div', class_='contentBody').get_text()
-        article_title = article_content.title.string
+            article_text = article_content.find('div', class_='contentBody').get_text()
+            article_title = article_content.title.string
 
-        output.append({
-            "title": article_title,
-            "content": article_text,
-            "url": article_url
-        })
+            print(article_title)
+
+            #jw_doc_id = article.split("docid=")[-1].split("&")[0]
+            #jw_article_image = f"https://cms-imgp.jw-cdn.org/img/p/{jw_doc_id}/univ/art/{jw_doc_id}_univ_sqs_lg.jpg"
+
+            #jw_article_image_valid = requests.get(jw_article_image)
+            #if jw_article_image_valid.status_code != 200:
+            #    jw_article_image = "/static/img/article.png"
+
+            sources.append({
+                "url": article,
+                "title": article_title,
+                #"image": jw_article_image
+            })
+
+            output.append({
+                "context": "JW.ORG",
+                "title": article_title,
+                "content": article_text,
+                "url": article
+            })
+
+        for article in wol_articles_urls:
+            article = requests.get(article, headers=headers)
+            article_content = BeautifulSoup(article.text, 'html.parser')
+
+            article_text = article_content.find('div', class_='content').get_text()
+            article_title = article_content.title.string
+
+            jw_article_image = "/static/img/article.png"
+
+            sources.append({
+                "url": article,
+                "title": article_title,
+                "image": jw_article_image
+            })
+
+            output.append({
+                "context": "Bibliothèque en ligne",
+                "title": article_title,
+                "content": article_text,
+                "url": article
+            })
 
         self.output = str(output)
 
@@ -84,18 +134,7 @@ def search_jw_org(openai_client, self, tool_call, socketio):
         ) as stream:
             stream.until_done()
 
-        jw_doc_id = article_url.split("docid=")[-1].split("&")[0]
-        jw_article_image = f"https://cms-imgp.jw-cdn.org/img/p/{jw_doc_id}/univ/art/{jw_doc_id}_univ_sqs_lg.jpg"
-
-        jw_article_image_valid = requests.get(jw_article_image)
-        if jw_article_image_valid.status_code != 200:
-            jw_article_image = "/static/img/article.png"
-
-        socketio.emit('response', {'article': {
-            "url": article_url,
-            "title": article_title,
-            "image": jw_article_image
-        }})
+        socketio.emit('response', {'article': sources})
     else:
         with openai_client.beta.threads.runs.submit_tool_outputs_stream(
             thread_id=self.thread_id,
