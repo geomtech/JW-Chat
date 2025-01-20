@@ -111,6 +111,19 @@ socket.on('response', function (data) {
         if (data.status == "end") {
             startedMessaging = false;
             statusElement.innerText = "";
+
+            var messages_containers = document.getElementById("response").children;
+
+            for (let i = 0; i < messages_containers.length; i++) {
+                const element = messages_containers[i];
+                
+                var responseElement = element.querySelector('.response');
+                if (responseElement) {
+                    var message = responseElement.innerHTML;
+                    
+                    responseElement.innerHTML = bible_handler(message);
+                }
+            }
         } else if (data.status == "in_progress") {
             statusElement.innerText = "...";
         } else if (data.status == "completed") {
@@ -165,4 +178,9 @@ document.getElementById("user-input").addEventListener('blur', function () {
 
 document.getElementById("question-form").addEventListener('submit', function () {
     document.getElementById("user-input").blur();
+});
+
+// on closing webpage, disconnect socket
+window.addEventListener('beforeunload', function () {
+    socket.disconnect();
 });

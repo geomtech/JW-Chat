@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="fr" class="bg-neutral-100 dark:bg-neutral-900 text-gray-900 dark:text-gray-100 h-fit">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>JW CH.AT</title>
+    <meta name="description" content="JW CH.AT">
+    <meta name="author" content="JW CH.AT">
+
+    <link rel="icon" href="/static/img/icon.png" type="image/png">
+
+    <link rel="stylesheet" href="/static/css/jw-chat.css">
+    <link rel="stylesheet" href="/static/css/jw-chat-custom.css">
+    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+    <link rel="manifest" href="/static/manifest.webmanifest">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('/static/js/service-worker.js').then(function (registration) {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                }, function (error) {
+                    console.log('ServiceWorker registration failed: ', error);
+                });
+            });
+        }
+    </script>
+</head>
+
+<body class="bg-neutral-100 dark:bg-neutral-900 text-gray-900 dark:text-gray-100 h-fit">
+    {% block content %}{% endblock %}
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="/static/js/bible.js"></script>
+    <script src="/static/js/jw-chat.js"></script>
+</body>
+
+</html>

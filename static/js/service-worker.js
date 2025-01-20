@@ -7,6 +7,7 @@ self.addEventListener('install', event => {
                 '/static/css/jw-chat.css',
                 '/static/css/jw-chat-custom.css',
                 '/static/js/jw-chat.js',
+                '/static/js/bible.js',
                 'https://cdn.socket.io/4.0.1/socket.io.min.js',
                 'https://cdn.jsdelivr.net/npm/marked/marked.min.js'
             ]);
