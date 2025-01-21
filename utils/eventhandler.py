@@ -34,51 +34,29 @@ class EventHandler(AssistantEventHandler):
     @override
     def on_message_delta(self, delta, snapshot):
         if self.tool_id:
-            self.socketio.emit('response', {'message': delta.content[0].text.value})
-
-    @override
-    def on_message_done(self, message) -> None:
-        # print a citation to the file searched
-        message_content = message.content[0].text
-        annotations = message_content.annotations
-        citations = []
-        for index, annotation in enumerate(annotations):
-            message_content.value = message_content.value.replace(
-                annotation.text, f"[{index}]"
-            )
-            if file_citation := getattr(annotation, "file_citation", None):
-                cited_file = self.openai_client.files.retrieve(file_citation.file_id)
-
-                if "nwt" in cited_file.filename:
-                    url = f"https://www.jw.org/finder?pub=nwtsty&bible=20018000&wtlocale=F&srcid=share"
-                    citations.append({
-                        "url": url,
-                        "title": f"[{index}] Traduction du Monde Nouveau"
-                    })
-                    self.socketio.emit('response', {'pub': {
-                        "url": url,
-                        "title": "Traduction du Monde Nouveau",
-                        "image": "/static/img/bible.png"
-                    }})
-                else:
-                    citations.append({
-                        "url": None,
-                        "title": f"[{index}] {pubs.get_publication(cited_file.filename)}",
-                        "image": "/static/img/article.png"
-                    })
-                    self.socketio.emit('response', {'pub': {
-                        "url": None,
-                        "title": pubs.get_publication(cited_file.filename),
-                        "image": "/static/img/article.png"
-                    }})
-
-        self.socketio.emit('response', {'sources': [], 'completed_message': message_content.value})
+            content_entry = delta.content[0].text
+            message_delta = content_entry.value
+            
+            if content_entry.annotations:
+                for annotation in content_entry.annotations:
+                    if annotation.type == "file_citation":
+                        cited_file = self.openai_client.files.retrieve(annotation.file_citation.file_id)
+                        
+                        if "nwt" not in cited_file.filename:
+                            message_delta = str(message_delta).replace(annotation.text, "")
+                            
+                            self.socketio.emit('response', {
+                                'pub': {
+                                    "url": None,
+                                    "title": pubs.get_publication(cited_file.filename)["title"],
+                                    "image": pubs.get_publication(cited_file.filename)["image"]
+                                }
+                            })
+            self.socketio.emit('response', {'message': message_delta})
 
     @override
     def on_tool_call_created(self, tool_call):       
         self.tool_id = tool_call.id
-
-        print(f"\non_tool_call_created > {tool_call.type} - {tool_call.id}\n", flush=True)
 
         if tool_call.type == "file_search":
             self.function_name = ""

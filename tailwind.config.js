@@ -13,7 +13,8 @@ module.exports = {
         'tertiary': '#C8D9F1',
         'joyauxdelaparolededieu': '#3C7F8B',
         'appliquetoiauministere': '#D68F00',
-        'viechretienne': '#BF2F13'
+        'viechretienne': '#BF2F13',
+        'jworg': '#4a6da7'
       },
     },
   },

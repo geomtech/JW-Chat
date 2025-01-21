@@ -28,11 +28,11 @@ def search_jw_org(openai_client, self, tool_call, socketio):
             label = result.get("label", None)
 
             if label == "Vidéos":
-                socketio.emit('response', {'status': "Analyse des vidéos en cours..."})
+                #socketio.emit('response', {'status': "Analyse des vidéos en cours..."})
                 pass
 
             if label == "Rubriques de l'Index":
-                socketio.emit('response', {'status': "Analyse des rubriques de l'index en cours..."})
+                #socketio.emit('response', {'status': "Analyse des rubriques de l'index en cours..."})
                 pass
             
             if label == None:
@@ -110,8 +110,6 @@ def search_jw_org(openai_client, self, tool_call, socketio):
         else:
             self.output = "Aucun résultat"
 
-        print(f"\nassistant > {self.output}\n", flush=True)
-
         with openai_client.beta.threads.runs.submit_tool_outputs_stream(
             thread_id=self.thread_id,
             run_id=self.run_id,
@@ -139,7 +137,6 @@ def search_jw_org(openai_client, self, tool_call, socketio):
             stream.until_done()
 
 def fetch_jw_content(openai_client, self, tool_call, socketio):
-    print(f"\nassistant > Fetching JW.ORG content\n", flush=True)
     socketio.emit('response', {'status': "Lecture et réflexion en cours..."})
 
     jw_url = json.loads(tool_call.function.arguments)['url']
@@ -167,8 +164,6 @@ def fetch_jw_content(openai_client, self, tool_call, socketio):
         "url": jw_url,
         "content": article_text,
     }
-
-    print(output)
 
     self.output = str(output)
 

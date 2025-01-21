@@ -4,36 +4,46 @@ def sanitize_reference(reference):
 
 
 def get_publication(reference):
+    title = f"Autre publication ({reference.upper()})"
+    image = "/static/img/article.png"
+
     if 'lff' in reference:
-        return 'Vivez Pour Toujours'
+        title = 'Vivez Pour Toujours'
+        image = "/static/img/lff.jpg"
     elif 'nwt' in reference:
-        return 'Bible - Traduction du Monde Nouveau'
+        title = 'Bible - Traduction du Monde Nouveau'
+        image = "/static/img/bible.png"
     elif 'w' in reference:
-        return 'Tour de Garde'
+        title = 'Tour de Garde'
     elif 'g' in reference:
-        return 'Réveillez-Vous !'
+        title = 'Réveillez-Vous !'
     elif 'mwb' in reference:
-        return "Cahier pour la réunion Vie chrétienne et ministère"
+        title = "Cahier pour la réunion Vie chrétienne et ministère"
     elif 'dx20' in reference:
-        return 'Index 2020 des publications des Témoins de Jéhovah'
+        title = 'Index 2020 des publications des Témoins de Jéhovah'
     elif 'syr' in reference:
         year = sanitize_reference(year)
         year = "20" + str(reference.split('syr')[1])
 
-        return "Rapport mondial des Témoins de Jéhovah pour l’année de service " + year
+        title = "Rapport mondial des Témoins de Jéhovah pour l’année de service " + year
     elif "S-38" in reference:
-        return "Instructions pour la réunion Vie chrétienne et ministère"
+        title = "Instructions pour la réunion Vie chrétienne et ministère"
     elif "es25" in reference:
-        return "Examinons les Écritures chaque jour"
+        title = "Examinons les Écritures chaque jour"
     elif "scl" in reference:
-        return "Versets pour la vie chrétienne"
+        title = "Versets pour la vie chrétienne"
+        image = "/static/img/bible.png"
     elif "bt" in reference:
-        return "Rends pleinement témoignage au sujet du royaume de Dieu"
+        title = "Rends pleinement témoignage au sujet du royaume de Dieu"
     elif "lmd" in reference:
-        return "Allez et faites des disciples, avec amour"
+        title = "Allez et faites des disciples, avec amour"
     elif "th" in reference:
-        return "Applique-toi à la lecture et à l'enseignement"
+        title = "Applique-toi à la lecture et à l'enseignement"
     elif "rr" in reference:
-        return "Le culte pur de Jéhovah enfin rétabli !"
-    else:
-        return str(reference).upper()
+        title = "Le culte pur de Jéhovah enfin rétabli !"
+
+
+    return {
+        "title": str(title),
+        "image": str(image)
+    }

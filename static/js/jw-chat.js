@@ -74,12 +74,14 @@ socket.on('response', function (data) {
         // pub contains the url, title, and image of the pub to put on the left side of the message
         const pub = data.pub;
         const pubElement = document.createElement('a');
-        pubElement.classList.add('flex', 'flex-row', 'gap-2', 'w-full', 'mt-4', 'items-center');
-        pubElement.href = pub.url;
-        pubElement.target = "_blank";
-        pubElement.innerHTML = "<img src='" + pub.image + "' class='w-10 h-10 rounded-md'>";
-        pubElement.innerHTML += "<span>" + pub.title + "</span>";
+        pubElement.classList.add('mt-4');
+        if (pub.url) {
+            pubElement.href = pub.url;
+            pubElement.target = "_blank";
+        }
+        pubElement.innerHTML = "<img src='" + pub.image + "' class='first:z-10 last:z-0 size-8 border-2 border-white rounded-full'>";
         document.getElementById("response").lastChild.querySelector('.links').appendChild(pubElement);
+        console.log(pub);
     }
 
     if ("sources" in data) {
