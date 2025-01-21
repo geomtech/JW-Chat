@@ -150,7 +150,7 @@ def fetch_jw_content(openai_client, self, tool_call, socketio):
     
     try:
         article = requests.get(jw_url, headers=headers)
-        article_content = BeautifulSoup(article.text, 'html.parser')
+        article_content = BeautifulSoup(article, 'html.parser')
 
         if "wol.jw.org" in jw_url:
             article_text = article_content.find('div', class_='content').get_text()
