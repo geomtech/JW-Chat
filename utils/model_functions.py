@@ -156,8 +156,13 @@ def fetch_jw_content(openai_client, self, tool_call, socketio):
         else:
             article_text = article_content.find('div', class_='contentBody')
     except Exception as e:
-        print(f"\nassistant > {str(e)}\n", flush=True)
-        self.output = "Je n'ai pas pu récupérer le contenu de l'article."
+        try:
+            article = requests.get(jw_url, headers=headers)
+            article_content = BeautifulSoup(article.text, 'html.parser')
+
+            article_text = article_content.get_text()
+        except:
+            print("error when reading webpage")
 
     output = {            
         "url": jw_url,
