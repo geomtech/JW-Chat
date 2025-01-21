@@ -122,7 +122,6 @@ def search_jw_org(openai_client, self, tool_call, socketio):
             stream.until_done()
 
     except Exception as e:
-        print(f"\error search_jw_org > {str(e)}\n", flush=True)
         self.output = "Une erreur a été rencontré lors de la récupération des résultats."
 
         with openai_client.beta.threads.runs.submit_tool_outputs_stream(
