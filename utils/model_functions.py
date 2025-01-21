@@ -153,9 +153,9 @@ def fetch_jw_content(openai_client, self, tool_call, socketio):
         article_content = BeautifulSoup(article.text(), 'html.parser')
 
         if "wol.jw.org" in jw_url:
-            article_text = article_content.find('div', class_='content').get_text()
+            article_text = article_content.find('div', class_='content')
         else:
-            article_text = article_content.find('div', class_='contentBody').get_text()
+            article_text = article_content.find('div', class_='contentBody')
     except Exception as e:
         print(f"\nassistant > {str(e)}\n", flush=True)
         self.output = "Je n'ai pas pu récupérer le contenu de l'article."
