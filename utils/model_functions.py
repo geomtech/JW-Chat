@@ -1,6 +1,7 @@
 from gzip import decompress
 import json
 import concurrent.futures
+from flask import request
 import requests
 from bs4 import BeautifulSoup
 from utils.eventhandler import EventHandler
@@ -14,7 +15,7 @@ def search_jw_org(openai_client, args, socketio):
         get_bearer_token = requests.get("https://b.jw-cdn.org/tokens/jworg.jwt")
         bearer_token = get_bearer_token.text
 
-        socketio.emit('response', {'status': f"Recherche de '{query}' via l'API JW.ORG..."})
+        socketio.emit('response', {'status': f"Recherche de '{query}' via l'API JW.ORG..."}, room=request.sid)
 
         jw_url = f"https://b.jw-cdn.org/apis/search/results/F/all?q={str(query)}&limit=5"
 
@@ -29,11 +30,11 @@ def search_jw_org(openai_client, args, socketio):
             label = result.get("label", None)
 
             if label == "Vidéos":
-                #socketio.emit('response', {'status': "Analyse des vidéos en cours..."})
+                #socketio.emit('response', {'status': "Analyse des vidéos en cours..."}, room=request.sid)
                 pass
 
             if label == "Rubriques de l'Index":
-                #socketio.emit('response', {'status': "Analyse des rubriques de l'index en cours..."})
+                #socketio.emit('response', {'status': "Analyse des rubriques de l'index en cours..."}, room=request.sid)
                 pass
             
             if label == None:
@@ -115,7 +116,7 @@ def search_jw_org(openai_client, args, socketio):
         return "Une erreur a été rencontré lors de la récupération des résultats. Détails techniques : " + str(e)
 
 def fetch_jw_content(args, socketio):
-    socketio.emit('response', {'status': "Lecture et réflexion en cours..."})
+    socketio.emit('response', {'status': "Lecture et réflexion en cours..."}, room=request.sid)
     jw_links = {}
     jw_url = args['url']
     article_text = "Contenu non récupéré"
@@ -148,18 +149,24 @@ def fetch_jw_content(args, socketio):
         try:
             doc_id = jw_url.split('docid=')[1]
             doc_id = doc_id.split('&')[0]
-
-            jw_image_url = f"https://cms-imgp.jw-cdn.org/img/p/{doc_id}/univ/art/{doc_id}_univ_sqs_lg.jpg"
+            
+            if "wol.jw.org" in jw_url:
+                jw_image_url = f"/jw-image/{doc_id}/wol"
+            else:
+                jw_image_url = f"/jw-image/{doc_id}/jw"
             
             image_url = jw_image_url
         except:
-            image_url = "/static/img/jw.png"
+            if "wol.jw.org" in jw_url:
+                image_url = f"/jw-image/null/wol"
+            else:
+                image_url = f"/jw-image/null/jw"
 
         jw_links = {
-                "url": jw_url,
-                "title": article_content.title.string,
-                "image": image_url
-            }
+            "url": jw_url,
+            "title": article_content.title.string,
+            "image": image_url
+        }
     except Exception as e:
         output = {
             "page_title": "Erreur lors de la récupération du contenu", 

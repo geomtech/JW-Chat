@@ -1,5 +1,6 @@
 import json
 import time
+from flask import request
 from typing_extensions import override
 from openai import AssistantEventHandler, OpenAI
 from openai.types.beta.threads import Text, TextDelta
@@ -28,17 +29,17 @@ class EventHandler(AssistantEventHandler):
     @override
     def on_text_delta(self, delta, snapshot):
         if self.tool_id == None:
-            self.socketio.emit('response', {'message': delta.value})
+            self.socketio.emit('response', {'message': delta.value}, room=request.sid)
 
     @override
     def on_end(self):        
         self.socketio.emit('response', {
             'status': 'end'
-        })
+        }, room=request.sid)
 
         self.socketio.emit('response', {
             'jw_links': self.jw_links
-        })
+        }, room=request.sid)
 
         self.jw_links = []
 
@@ -62,8 +63,8 @@ class EventHandler(AssistantEventHandler):
                                     "title": pubs.get_publication(cited_file.filename)["title"],
                                     "image": pubs.get_publication(cited_file.filename)["image"]
                                 }
-                            })
-            self.socketio.emit('response', {'message': message_delta})
+                            }, room=request.sid)
+            self.socketio.emit('response', {'message': message_delta}, room=request.sid)
 
     @override
     def on_tool_call_created(self, tool_call):       
@@ -71,10 +72,10 @@ class EventHandler(AssistantEventHandler):
 
         if tool_call.type == "file_search":
             self.function_name = ""
-            self.socketio.emit('response', {'status': "source_search"})
+            self.socketio.emit('response', {'status': "source_search"}, room=request.sid)
         elif tool_call.type == "function":
             self.function_name = tool_call.function.name
-            self.socketio.emit('response', {'status': "function_call"})
+            self.socketio.emit('response', {'status': "function_call"}, room=request.sid)
 
             keep_retrieving_run = self.openai_client.beta.threads.runs.retrieve(
                 thread_id=self.thread_id,
@@ -115,7 +116,8 @@ class EventHandler(AssistantEventHandler):
 
                     print("fetched ")
 
-                    self.jw_links.append(output[1])
+                    if output[1] not in self.jw_links:
+                        self.jw_links.append(output[1])
                     
                     tool_output = {"tool_call_id":tool_call.id, "output": str(output)}
                     tools_outputs.append(tool_output)
@@ -140,14 +142,14 @@ class EventHandler(AssistantEventHandler):
                     stream.until_done()
 
         elif keep_retrieving_run.status == "failed":
-            self.socketio.emit('response', {'error': "Une erreur s'est produite lors de la recherche"})
+            self.socketio.emit('response', {'error': "Une erreur s'est produite lors de la recherche"}, room=request.sid)
             print(f"\nassistant > {tool_call.type}\n", flush=True)
             print(f"\nassistant > {keep_retrieving_run.last_error}\n", flush=True)
 
         elif keep_retrieving_run.status == "in_progress":
             if tool_call.type == "function":
                 if tool_call.function.name == "search_jw_org":
-                    self.socketio.emit('response', {'status': "Recherche en cours..."})
+                    self.socketio.emit('response', {'status': "Recherche en cours..."}, room=request.sid)
 
     @override
     def on_run_step_created(self, run_step: RunStep) -> None:

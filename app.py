@@ -120,9 +120,7 @@ def logout():
 
 @socketio.on('ask_openai')
 def handle_ask_openai(data):
-    if 'is_logged' not in session:
-        socketio.emit('response', {'message': f"Vous n'êtes pas connecté"})
-    else:
+    if 'is_logged' in session:
         try:
             prompt = data.get("user_input")
             thread_id = session.get("thread_id", None)
@@ -137,12 +135,12 @@ def handle_ask_openai(data):
                 try:
                     new_thread = openai_client.beta.threads.retrieve(thread_id=thread_id)
                 except Exception as e:
-                    socketio.emit('response', {'error': f"Thread ID not found: {str(e)}"})
+                    socketio.emit('response', {'error': f"Thread ID not found: {str(e)}"}, room=request.sid)
                     return
             else:
                 new_thread = openai_client.beta.threads.create()
 
-            socketio.emit('response', {'thread_id': f"{new_thread.id}"})
+            socketio.emit('response', {'thread_id': f"{new_thread.id}"}, room=request.sid)
             session['thread_id'] = str(new_thread.id)
             
             openai_client.beta.threads.messages.create(thread_id=new_thread.id, role="user", content=prompt)
@@ -159,7 +157,20 @@ def handle_ask_openai(data):
             ) as stream:
                 stream.until_done()
         except Exception as e:
-            socketio.emit('response', {'error': f"Une erreur s'est produite: {str(e)}"})
+            socketio.emit('response', {'error': f"Une erreur s'est produite: {str(e)}"}, room=request.sid)
+
+
+@app.route('/jw-image/<doc_id>/<site>')
+def jw_image(doc_id, site):
+    jw_image_url = f"https://cms-imgp.jw-cdn.org/img/p/{doc_id}/univ/art/{doc_id}_univ_sqs_lg.jpg"
+
+    if doc_id != "null":
+        if requests.head(jw_image_url).ok:
+            return redirect(jw_image_url)
+    
+    if site == "wol":
+        return redirect("/static/img/wol.png")
+    return redirect("/static/img/jw.png")
 
 
 if __name__ == '__main__':
