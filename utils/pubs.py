@@ -9,7 +9,7 @@ def get_publication(reference):
 
     if 'lff' in reference:
         title = 'Vivez Pour Toujours'
-        image = "/static/img/lff.jpg"
+        image = "/static/img/lff.png"
     elif 'nwt' in reference:
         title = 'Bible - Traduction du Monde Nouveau'
         image = "/static/img/bible.png"

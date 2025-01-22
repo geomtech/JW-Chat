@@ -1,3 +1,4 @@
+from gzip import decompress
 import json
 import concurrent.futures
 import requests
@@ -5,19 +6,19 @@ from bs4 import BeautifulSoup
 from utils.eventhandler import EventHandler
 
 
-def search_jw_org(openai_client, self, tool_call, socketio):
-    query = json.loads(tool_call.function.arguments)['query']
-    question = json.loads(tool_call.function.arguments)['question']
-
-    get_bearer_token = requests.get("https://b.jw-cdn.org/tokens/jworg.jwt")
-    bearer_token = get_bearer_token.text
-
-    print(f"\nassistant > '{query}' on JW.ORG\n", flush=True)
-    socketio.emit('response', {'status': f"Recherche de '{query}' via l'API JW.ORG..."})
-
-    jw_url = f"https://b.jw-cdn.org/apis/search/results/F/all?q={str(query)}&limit=5"
-
+def search_jw_org(openai_client, args, socketio):
     try:
+        query = args['query']
+        question = args['question']
+
+        get_bearer_token = requests.get("https://b.jw-cdn.org/tokens/jworg.jwt")
+        bearer_token = get_bearer_token.text
+
+        socketio.emit('response', {'status': f"Recherche de '{query}' via l'API JW.ORG..."})
+
+        jw_url = f"https://b.jw-cdn.org/apis/search/results/F/all?q={str(query)}&limit=5"
+
+    
         r = requests.get(jw_url, headers={"Authorization": f"Bearer {bearer_token}"})
         r = r.json()
 
@@ -61,7 +62,7 @@ def search_jw_org(openai_client, self, tool_call, socketio):
                             })
 
         if len(results_output) > 0:
-            self.output = str(results_output)
+            output = str(results_output)
 
             completion = openai_client.chat.completions.create(
                 model="gpt-4o-mini",
@@ -76,7 +77,7 @@ def search_jw_org(openai_client, self, tool_call, socketio):
                     },
                     {
                         "role": "developer",
-                        "content": self.output
+                        "content": output
                     },
                     {
                         "role": "assistant",
@@ -101,83 +102,70 @@ def search_jw_org(openai_client, self, tool_call, socketio):
                 }
             )
 
-            self.output = completion.choices[0].message.content
+            completion_output = completion.choices[0].message.content
 
             try:
-                self.output = json.loads(self.output)["url"]
+                return json.loads(completion_output)["url"]
             except:
-                self.output = "Aucun résultat"
+                return "Aucun résultat"
         else:
-            self.output = "Aucun résultat"
-
-        with openai_client.beta.threads.runs.submit_tool_outputs_stream(
-            thread_id=self.thread_id,
-            run_id=self.run_id,
-            tool_outputs=[{
-                "tool_call_id": tool_call.id,
-                "output": self.output,
-            }],
-            event_handler=EventHandler(self.openai_client, self.thread_id, self.assistant_id, socketio)
-        ) as stream:
-            stream.until_done()
+            return "Aucun résultat"
 
     except Exception as e:
-        self.output = "Une erreur a été rencontré lors de la récupération des résultats."
+        return "Une erreur a été rencontré lors de la récupération des résultats. Détails techniques : " + str(e)
 
-        with openai_client.beta.threads.runs.submit_tool_outputs_stream(
-            thread_id=self.thread_id,
-            run_id=self.run_id,
-            tool_outputs=[{
-                "tool_call_id": tool_call.id,
-                "output": self.output,
-            }],
-            event_handler=EventHandler(self.openai_client, self.thread_id, self.assistant_id, socketio)
-        ) as stream:
-            stream.until_done()
-
-def fetch_jw_content(openai_client, self, tool_call, socketio):
+def fetch_jw_content(args, socketio):
     socketio.emit('response', {'status': "Lecture et réflexion en cours..."})
-
-    jw_url = json.loads(tool_call.function.arguments)['url']
+    jw_links = {}
+    jw_url = args['url']
     article_text = "Contenu non récupéré"
     
-    headers = {
-        "Accept": "text/html",
-        # Add a user agent to mimic a web browser
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    }
-    
     try:
-        article = requests.get(jw_url, headers=headers)
+        article = requests.get(jw_url)
         article_content = BeautifulSoup(article.text, 'html.parser')
 
         if "wol.jw.org" in jw_url:
             article_text = article_content.find('div', class_='content')
         else:
             article_text = article_content.find('div', class_='contentBody')
-    except Exception as e:
-        try:
-            article = requests.get(jw_url, headers=headers)
-            article_content = BeautifulSoup(article.text, 'html.parser')
 
+        if article_text != "Contenu non récupéré":
+            if article_text == None:
+                article_text = article.text
+            else:
+                article_text = article_text.get_text()
+        else:
             article_text = article_content.get_text()
+
+        output = {
+            "page_title": article_content.title.string, 
+            "url": jw_url,
+            "content": article_text,
+        }
+
+        image_url = None
+
+        try:
+            doc_id = jw_url.split('docid=')[1]
+            doc_id = doc_id.split('&')[0]
+
+            jw_image_url = f"https://cms-imgp.jw-cdn.org/img/p/{doc_id}/univ/art/{doc_id}_univ_sqs_lg.jpg"
+            
+            image_url = jw_image_url
         except:
-            print("error when reading webpage")
+            image_url = "/static/img/jw.png"
 
-    output = {            
-        "url": jw_url,
-        "content": article_text,
-    }
+        jw_links = {
+                "url": jw_url,
+                "title": article_content.title.string,
+                "image": image_url
+            }
+    except Exception as e:
+        output = {
+            "page_title": "Erreur lors de la récupération du contenu", 
+            "url": jw_url,
+            "content": "Contenu non récupéré"
+        }
+        print(e)
 
-    self.output = str(output)
-
-    with openai_client.beta.threads.runs.submit_tool_outputs_stream(
-            thread_id=self.thread_id,
-            run_id=self.run_id,
-            tool_outputs=[{
-                "tool_call_id": tool_call.id,
-                "output": self.output,
-            }],
-            event_handler=EventHandler(self.openai_client, self.thread_id, self.assistant_id, socketio)
-        ) as stream:
-            stream.until_done()
+    return [str(output), jw_links]

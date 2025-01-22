@@ -1,7 +1,7 @@
 {% extends "template.html" %}
 
 {% block content %}
-<div class="relative h-fit max-w-3xl mx-auto flex flex-col">
+<div class="relative h-fit max-w-3xl mx-auto flex flex-col" id="body">
     <div
         class="sticky top-0 w-full bg-neutral-100 dark:bg-neutral-950 p-2 z-50 flex flex-row justify-between items-center border-b border-neutral-200 dark:border-neutral-800">
         <div class="flex flex-row items-center gap-2">
@@ -17,6 +17,38 @@
             </svg>
         </button>
     </div>
+
+
+    <div id="modal-articles-template" data-modal-target class="hidden">
+        <div class="flex items-center justify-center fixed inset-0 z-50">
+            <div data-modal-close data-modal-overlay tabindex="-1" data-class-out="opacity-0" data-class-in="opacity-50"
+                class="opacity-0 fixed inset-0 w-full z-40 transition-opacity duration-300 bg-black select-none"></div>
+            <div data-modal-wrapper data-class-out="opacity-0 translate-y-5" data-class-in="opacity-100 translate-y-0"
+                class="opacity-0 translate-y-5 w-full z-50 overflow-auto sm:max-w-lg max-h-screen scrolling-touch transition-all duration-300 bg-white dark:bg-neutral-900 flex flex-col transform shadow-xl rounded-md m-5">
+                <div class="flex items-center justify-between border-b p-6 dark:border-neutral-800">
+                    <div class="text-gray-900 dark:text-gray-100">
+                        Articles intéressants
+                    </div>
+                    <button data-modal-close aria-label="Close"
+                        class="text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white focus:outline-none focus:text-black dark:focus:text-white transition ease-in-out duration-150 ml-auto">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="relative overflow-x-hidden overflow-y-auto h-full flex-grow p-5">
+                    <div class="flex flex-col gap-2 articles text-gray-900 dark:text-gray-100"></div>
+                    <div class="text-right pt-2">
+                        <button data-modal-close class="text-gray-900 dark:text-gray-100 hover:text-black dark:hover:text-white">
+                            Fermer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 
     <div id="response" class="flex flex-col gap-4 mt-4 p-4 flex-1">
         <div class="hidden flex flex-row gap-2 w-full z-10" id="user-template">
@@ -51,7 +83,7 @@
     </div>
 
     <div class="my-2">
-        <span id="status" class="text-xs text-gray-500 max-w-prose px-2"></span>
+        <span id="status" class="text-xs text-gray-500 max-w-prose px-2 animate-pulse"></span>
         <div class="flex my-10 invisible" id="loading">
             <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12"></div>
         </div>
@@ -63,7 +95,7 @@
             class="rounded-3xl flex flex-row items-center gap-2 bg-gradient-to-r from-pink-500 via-red-500 to-teal-500 p-px">
             <div
                 class="relative flex-grow bg-neutral-50 dark:bg-neutral-800 rounded-3xl py-1 px-2 z-30 shadow-[0_0px_60px_-15px_rgba(0,0,0,0.3)] dark:shadow-[0_0px_60px_-15px_rgba(0,0,0,0.3)] shadow-teal-500/50 dark:shadow-teal-500/50">
-                <div contenteditable="true" role="textbox" aria-multiline="true" id="user-input"
+                <div contentEditable="plaintext-only" role="textbox" aria-multiline="true" id="user-input"
                     class="flex-grow max-w-full break-all text-black p-2 dark:text-white outline-none z-50 pr-8">
                 </div>
                 <div class="absolute top-1 left-2 p-2 text-gray-500 z-20 pointer-events-none"

@@ -24,7 +24,7 @@ function bible_book_id(book) {
         "ecc": 21,
         "chant": 22,
         "isa": 23,
-        "jer": 24,
+        "jér": 24,
         "lam": 25,
         "ez": 26,
         "da": 27,

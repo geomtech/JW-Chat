@@ -37,6 +37,8 @@ document.getElementById("question-form").onsubmit = function (event) {
 
 // Écoute les réponses de l'API
 socket.on('response', function (data) {
+    console.log(data);
+
     if ("thread_id" in data) {
         thread_id = data.thread_id;
     }
@@ -58,16 +60,51 @@ socket.on('response', function (data) {
         window.scrollTo(0, document.body.scrollHeight);
     }
 
-    if ("article" in data) {
-        // article contains the url, title, and image of the article to put on the left side of the message
-        const article = data.article;
-        const articleElement = document.createElement('a');
-        articleElement.classList.add('flex', 'flex-row', 'gap-2', 'w-full', 'mt-4', 'items-center');
-        articleElement.href = article.url;
-        articleElement.target = "_blank";
-        articleElement.innerHTML = "<img src='" + article.image + "' class='w-10 h-10 rounded-md'>";
-        articleElement.innerHTML += "<span>" + article.title + "</span>";
-        document.getElementById("response").lastChild.querySelector('.links').appendChild(articleElement);
+    if ("jw_links" in data) {
+        // pub contains the url, title, and image of the pub to put on the left side of the message
+        const jw_links = data.jw_links;
+
+        for (var i = 0; i < jw_links.length; i++) {
+            const jw_link = jw_links[i];
+
+            const jwElement = document.createElement('button');
+            jwElement.classList.add('mt-4');
+            jwElement.onclick = function () {
+                const modalTemplate = document.getElementById("modal-articles-template");
+                const newModal = modalTemplate.cloneNode(true);
+                newModal.id = "modal-" + Math.random().toString(36).substr(2, 9);
+
+                for (var i = 0; i < jw_links.length; i++) {
+                    const jw_link = jw_links[i];
+
+                    const articleElement = document.createElement('a');
+                    articleElement.classList.add('flex', 'items-center', 'mt-4', 'p-4', 'bg-white', 'dark:bg-neutral-800', 'rounded-lg', 'shadow-md', 'hover:shadow-lg', 'transition-shadow', 'duration-300');
+                    articleElement.href = jw_link.url;
+                    articleElement.target = "_blank";
+
+                    const articleImage = document.createElement('img');
+                    articleImage.src = jw_link.image;
+                    articleImage.classList.add('w-12', 'h-12', 'mr-4', 'rounded-md', 'shadow');
+
+                    const articleTitle = document.createElement('span');
+                    articleTitle.innerText = jw_link.title;
+                    articleTitle.classList.add('text-lg', 'font-semibold', 'text-gray-900', 'dark:text-gray-100');
+
+                    articleElement.appendChild(articleImage);
+                    articleElement.appendChild(articleTitle);
+
+                    newModal.querySelector('.articles').appendChild(articleElement);
+                }
+
+                document.getElementById("body").appendChild(newModal);
+
+                modal.init();
+                modal.openModal(newModal.id);
+            }
+            jwElement.innerHTML = "<img src='" + jw_link.image + "' class='first:z-10 last:z-0 size-8 border-2 border-white rounded-full'>";
+
+            document.getElementById("response").lastChild.querySelector('.links').appendChild(jwElement);
+        }
     }
 
     if ("pub" in data) {
@@ -75,13 +112,17 @@ socket.on('response', function (data) {
         const pub = data.pub;
         const pubElement = document.createElement('a');
         pubElement.classList.add('mt-4');
-        if (pub.url) {
+
+        if (pub && "url" in pub && pub.url) {
             pubElement.href = pub.url;
             pubElement.target = "_blank";
         }
+
         pubElement.innerHTML = "<img src='" + pub.image + "' class='first:z-10 last:z-0 size-8 border-2 border-white rounded-full'>";
+
         document.getElementById("response").lastChild.querySelector('.links').appendChild(pubElement);
-        console.log(pub);
+        
+        console.log("publication: ", pub);
     }
 
     if ("sources" in data) {
@@ -108,8 +149,6 @@ socket.on('response', function (data) {
     }
 
     if ("status" in data) {
-        console.log(data);
-
         if (data.status == "end") {
             startedMessaging = false;
             statusElement.innerText = "";
@@ -186,3 +225,8 @@ document.getElementById("question-form").addEventListener('submit', function () 
 window.addEventListener('beforeunload', function () {
     socket.disconnect();
 });
+
+
+function closeModal() {
+    document.getElementById("modal").classList.add("hidden");
+}
