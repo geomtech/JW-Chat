@@ -14,7 +14,7 @@ module.exports = {
         'joyauxdelaparolededieu': '#3C7F8B',
         'appliquetoiauministere': '#D68F00',
         'viechretienne': '#BF2F13',
-        'jworg': '#4a6da7'
+        'jworg': 'rgb(159, 185, 227)',
       },
     },
   },

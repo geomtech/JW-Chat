@@ -118,6 +118,13 @@ def logout():
     return redirect('/auth')
 
 
+@socketio.on('action')
+def handle_action(data):
+    if data == "new_chat":
+        session.pop('thread_id', None)
+        socketio.emit('response', {'status': 'new_chat_started'}, room=request.sid)
+
+
 @socketio.on('ask_openai')
 def handle_ask_openai(data):
     if 'is_logged' in session:

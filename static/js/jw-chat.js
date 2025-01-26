@@ -173,6 +173,9 @@ socket.on('response', function (data) {
             statusElement.innerText = "Recherche d'informations dans la bibliothèque...";
         } else if (data.status == "function_call") {
             statusElement.innerText = "Recherche d'informations sur JW.ORG et WOL...";
+        } else if (data.status == "new_chat_started") {
+            // remove all messages
+            document.getElementById("response").innerHTML = "";
         } else {
             statusElement.innerText = data.status;
         }
@@ -229,4 +232,8 @@ window.addEventListener('beforeunload', function () {
 
 function closeModal() {
     document.getElementById("modal").classList.add("hidden");
+}
+
+function newChat() {
+    socket.emit('action', "new_chat");
 }
