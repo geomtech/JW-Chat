@@ -16,11 +16,11 @@ function history() {
                 historyListWithElements.innerHTML = "";
                 data.forEach(history => {
                     const historyItem = document.createElement("li");
-                    historyItem.classList.add("flex", "flex-row", "items-center", "gap-x-2", "w-full");
+                    historyItem.classList.add("flex", "flex-row", "items-center", "gap-x-2", "w-full", "history-item");
 
                     const historyButton = document.createElement("button");
                     historyButton.type = "button";
-                    historyButton.classList.add("flex-1", "bg-neutral-200", "hover:bg-neutral-300", 'dark:bg-neutral-800', 'dark:hover:bg-neutral-700', "p-2", "rounded", "m-1");
+                    historyButton.classList.add("flex-1", "text-left", "bg-neutral-200", "hover:bg-neutral-300", 'dark:bg-neutral-800', 'dark:hover:bg-neutral-700', "p-2", "rounded", "m-1", "truncate");
                     historyButton.innerHTML = history.title;
                     historyButton.onclick = function () {
                         retrieveMessages(history.thread_id);

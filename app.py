@@ -127,8 +127,9 @@ def index():
 
     if user_id:
         user_history = history_collection.find({"user_id": user_id})
+        mail = users_collection.find_one({"_id": ObjectId(user_id)})['email']
         
-    return render_template('index.html', user_history=user_history)
+    return render_template('index.html', user_history=user_history, mail=mail)
 
 
 @app.route('/logout')
