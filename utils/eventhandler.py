@@ -9,7 +9,7 @@ from openai.types.beta.threads import Message, MessageDelta
 from openai.types.beta.threads.runs import ToolCall, RunStep, FunctionToolCall
 from openai.types.beta import AssistantStreamEvent
 
-from utils import pubs
+from utils import pubs, costs
 
 class EventHandler(AssistantEventHandler):
     def __init__(self, openai_client, thread_id, assistant_id, socketio):
@@ -156,3 +156,14 @@ class EventHandler(AssistantEventHandler):
         self.run_id = run_step.run_id
         self.run_step = run_step
 
+    @override
+    def on_run_step_done(self, run_step):
+        costs.addUsage(run_step.usage.completion_tokens, "completion")
+        costs.addUsage(run_step.usage.prompt_tokens, "prompt")
+
+        try:
+            if "prompt_token_details" in run_step.usage:
+                if run_step.usage.prompt_token_details.get('cached_tokens', 0) > 0:
+                    costs.addUsage(run_step.usage.prompt_token_details.get('cached_tokens', 0), "cache")
+        except:
+            pass

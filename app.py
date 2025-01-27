@@ -205,10 +205,24 @@ def get_history():
     return jsonify(user_history)
 
 
-@app.route('/api/v1/history/<thread_id>', methods=['GET'])
+@app.route('/api/v1/history/<thread_id>', methods=['GET', 'DELETE'])
 def get_thread_history(thread_id):
     if 'is_logged' not in session:
         return "Unauthorized", 401
+    
+    if request.method == 'DELETE':
+        db = client['jw_chat']
+        history_collection = db['history']
+        user_id = session.get('user_id', None)
+
+        if user_id:
+            try:
+                history_collection.delete_many(
+                    {"user_id": user_id, "thread_id": thread_id})
+                openai_client.beta.threads.delete(thread_id=thread_id)
+                return "OK", 200
+            except Exception as e:
+                return str(e), 500
     
     session['thread_id'] = thread_id
 

@@ -228,11 +228,11 @@ document.getElementById("user-input").addEventListener('input', function () {
 
 document.getElementById("user-input").addEventListener('touchstart', function () {
     this.focus();
-});
+}, { passive: true });
 
 document.getElementById("user-input-placeholder").addEventListener('touchstart', function () {
     document.getElementById("user-input").focus();
-});
+}, { passive: true });
 
 document.getElementById("user-input").addEventListener('blur', function () {
     window.scrollTo(0, document.body.scrollHeight);
