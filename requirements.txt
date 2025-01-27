@@ -11,3 +11,5 @@ beautifulsoup4
 pymongo
 flask-bcrypt
 flask-mail
+redis
+flask-session

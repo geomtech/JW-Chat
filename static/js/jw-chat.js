@@ -9,9 +9,12 @@ const userTemplate = document.getElementById("user-template");
 const assistantTemplate = document.getElementById("assistant-template");
 const statusElement = document.getElementById("status");
 
+var firstUserInput = "";
+
 document.getElementById("question-form").onsubmit = function (event) {
     event.preventDefault();
     const userInput = document.getElementById("user-input").innerText;
+    firstUserInput = userInput;
 
     if (userInput.trim() == "") {
         alert("Vous ne pouvez pas envoyer un message vide.", "error");
@@ -35,12 +38,27 @@ document.getElementById("question-form").onsubmit = function (event) {
     placeholderUpdate();
 };
 
+newMessage = function (message) {
+    const assistantMessage = assistantTemplate.cloneNode(true);
+    assistantMessage.classList.remove('hidden');
+    assistantMessage.querySelector('.response').innerHTML = marked.parse(bible_handler(message));
+    document.getElementById("response").appendChild(assistantMessage);
+}
+
+newUserMessage = function (message) {
+    const userMessage = userTemplate.cloneNode(true);
+    userMessage.classList.remove('hidden');
+    userMessage.querySelector('div').innerHTML = marked.parse(bible_handler(message));
+    document.getElementById("response").appendChild(userMessage);
+}
+
 // Écoute les réponses de l'API
 socket.on('response', function (data) {
     console.log(data);
 
     if ("thread_id" in data) {
         thread_id = data.thread_id;
+        addHistory(firstUserInput, thread_id);
     }
 
     if ("message" in data) {
