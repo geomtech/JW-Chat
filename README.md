@@ -9,6 +9,14 @@ JW Chat est une application web qui utilise l'intelligence artificielle pour aid
 - **Paiements** : Intégration avec Stripe pour gérer les paiements et les crédits des utilisateurs.
 - **Chat en temps réel** : Utilise Flask-SocketIO pour permettre des sessions de chat en temps réel.
 
+## Captures d'écrans
+
+![image](https://github.com/user-attachments/assets/54a20c48-fbdb-41cb-bc5e-16f0927f5a4e)
+![image](https://github.com/user-attachments/assets/e31b1638-7e55-4452-9f73-5a04f26da36a)
+![image](https://github.com/user-attachments/assets/0ff3699b-6250-41b2-8f6b-eb3ffda25c97)
+![image](https://github.com/user-attachments/assets/a227d8d0-ae25-439d-ab3f-7ba01fe06d66)
+![image](https://github.com/user-attachments/assets/490f3ff6-b5f8-447d-adfb-64095fb99b65)
+
 ## Prérequis
 
 Avant de commencer, assurez-vous d'avoir les éléments suivants installés sur votre machine :
