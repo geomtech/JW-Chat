@@ -158,12 +158,19 @@ class EventHandler(AssistantEventHandler):
 
     @override
     def on_run_step_done(self, run_step):
-        costs.addUsage(run_step.usage.completion_tokens, "completion")
-        costs.addUsage(run_step.usage.prompt_tokens, "prompt")
+        run_id = run_step.run_id
+
+        run = self.openai_client.beta.threads.runs.retrieve(
+            thread_id=self.thread_id,
+            run_id=run_id
+        )
+
+        costs.addUsage(run.usage.completion_tokens, "completion")
+        costs.addUsage(run.usage.prompt_tokens, "prompt")
 
         try:
-            if "prompt_token_details" in run_step.usage:
-                if run_step.usage.prompt_token_details.get('cached_tokens', 0) > 0:
-                    costs.addUsage(run_step.usage.prompt_token_details.get('cached_tokens', 0), "cache")
+            if "prompt_token_details" in run.usage:
+                if run.usage.prompt_token_details.get('cached_tokens', 0) > 0:
+                    costs.addUsage(run.usage.prompt_token_details.get('cached_tokens', 0), "cache")
         except:
             pass
