@@ -20,6 +20,7 @@ Avant de commencer, assurez-vous d'avoir les éléments suivants installés sur 
 - **MongoDB** : Base de données NoSQL utilisée par l'application.
 - **Redis** : Utilisé pour la gestion des sessions en temps réel.
 - **Stripe Account** : Pour gérer les paiements.
+- **Compte OpenAI** : Pour l'API OpenAI pour l'assistant
 
 
 ## Installation
