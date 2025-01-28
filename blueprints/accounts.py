@@ -17,13 +17,15 @@ db = client['jw_chat']
 users_collection = db['users']
 payments_collection = db['payments']
 usage_collection = db['usage']
+prices_collection = db['prices']
 
 @accounts_bp.route('/account', methods=['GET'])
 def account():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     user = get_user_from_session()  # Function to get user from session
-    return render_template('account.html', user=user)
+    prices = prices_collection.find({})
+    return render_template('account.html', user=user, prices=prices)
 
 @accounts_bp.route('/checkout/<amount>', methods=['GET'])
 def checkout(amount):
@@ -34,14 +36,12 @@ def create_checkout_session():
     price_id = ""
     amount = int(request.json['amount'])
 
-    print(amount)
+    prices = prices_collection.find({})
 
-    if amount == 5:
-        price_id = 'price_1Qm24oF1FXlcWZG7onkeYkyb'
-    elif amount == 10:
-        price_id = 'price_1Qm27AF1FXlcWZG7Ta6jOkhP'
-    elif amount == 20:
-        price_id = 'price_1Qm27AF1FXlcWZG7LUYfFcI9'
+    for price in prices:
+        if price['amount'] == amount:
+            price_id = price['price_id']
+            break
     
     try:
         session = stripe.checkout.Session.create(
