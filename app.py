@@ -21,6 +21,9 @@ from openai import OpenAI
 from utils import eventhandler, email, db
 from utils.email import send_admin_notification
 
+# Import the accounts blueprint
+from blueprints.accounts import accounts_bp
+
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "your_secret_key")
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent', manage_session=False)
@@ -41,6 +44,9 @@ users_collection = db['users']
 
 openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", "sk-proj..."))
 openai_assistant_id = ""
+
+# Register the accounts blueprint
+app.register_blueprint(accounts_bp)
 
 @app.route('/auth', methods=['GET', 'POST'])
 def login():
