@@ -1,20 +1,24 @@
-<!DOCTYPE html>
-<html>
+{% extends "template.html" %}
 
-<head>
-    <title>Merci pour votre commande !</title>
-    <link rel="stylesheet" href="/static/css/jw-chat.css" />
-    <script src="/static/js/return.js" defer></script>
-</head>
+{% block head %}
+<script src="/static/js/return.js" defer></script>
+{% endblock %}
 
-<body>
-    <section id="success" class="hidden">
-        <p>
-            Merci beaucoup ! Un email de confirmation sera envoyé à <span id="customer-email"></span>.
-
-            Si vous avez des questions, veuillez envoyer un email à <a href="mailto:contact@geomtech.fr">contact@geomtech.fr</a>.
+{% block content %}
+<div class="container mx-auto py-6 px-2">
+    <section id="success" class="mb-4">
+        <p class="text-2xl font-bold text-green-500">Paiement réussi</p>
+        <p class="mt-4 text-black dark:text-white">
+            Merci beaucoup ! Votre compte a été crédité.
+    
+            Si vous avez des questions, veuillez envoyer un email à <a class="text-blue-500"
+                href="mailto:contact@geomtech.fr">contact@geomtech.fr</a>.
         </p>
     </section>
-</body>
-
-</html>
+    <div class="flex flex-col md:flex-row md:items-center gap-2">
+        <a href="/" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Retour sur JW Chat</a>
+        <a href="/account" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Voir mon
+            compte</a>
+    </div>
+</div>
+{% endblock %}
