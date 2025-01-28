@@ -33,6 +33,7 @@ def checkout(amount):
 
 @accounts_bp.route('/create-checkout-session', methods=['POST'])
 def create_checkout_session():
+    checkout_session = None
     price_id = ""
     amount = int(request.json['amount'])
 
@@ -44,22 +45,25 @@ def create_checkout_session():
             break
     
     try:
-        session = stripe.checkout.Session.create(
+        checkout_session = stripe.checkout.Session.create(
             ui_mode = 'embedded',
             line_items=[
                 {
                     # Provide the exact Price ID (for example, pr_1234) of the product you want to sell
-                    'price': price_id,
+                    'price': str(price_id),
                     'quantity': 1,
                 },
             ],
             mode='payment',
             return_url=request.url_root + 'return?session_id={CHECKOUT_SESSION_ID}',
         )
+        print(checkout_session)
     except Exception as e:
+        print(str(e))
         return str(e)
 
-    return jsonify(clientSecret=session.client_secret)
+    print(jsonify(clientSecret=checkout_session.client_secret).json)
+    return jsonify(clientSecret=checkout_session.client_secret)
 
 
 @accounts_bp.route('/session-status', methods=['GET'])
@@ -90,8 +94,11 @@ def return_page():
 
 @accounts_bp.route('/<amount>/checkout.js', methods=['GET'])
 def checkout_js(amount):
+    print(stripe.api_key)
+    print(os.getenv('STRIPE_API_KEY'))
     stripe_public_key = os.getenv('STRIPE_PUBLIC_KEY', None)
     if not stripe_public_key:
+        print('Error: Stripe public key not set')
         return 'Error: Stripe public key not set', 400
     print(stripe_public_key)
     return render_template('checkout.js', amount=amount, stripe_public_key=stripe_public_key)
