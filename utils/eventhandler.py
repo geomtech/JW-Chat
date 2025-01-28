@@ -166,14 +166,14 @@ class EventHandler(AssistantEventHandler):
         )
 
         try:
-            if "completion_tokens" in run.usage:
+            if "usage" in run and "completion_tokens" in run.usage:
                 if run.usage.get('completion_tokens', 0) > 0:
                     costs.addUsage(run.usage.completion_tokens, "completion")
         except:
             pass
         
         try:
-            if "prompt_tokens" in run.usage:
+            if "usage" in run and "prompt_tokens" in run.usage:
                 if run.usage.get('prompt_tokens', 0) > 0:
                     costs.addUsage(run.usage.prompt_tokens, "prompt")
         except:
