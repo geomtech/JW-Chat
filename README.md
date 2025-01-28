@@ -44,12 +44,14 @@ Avant de commencer, assurez-vous d'avoir les éléments suivants installés sur 
 
 4. Configurez les variables d'environnement nécessaires :
     ```sh
-    export FLASK_APP=app.py
-    export FLASK_ENV=development
-    export SECRET_KEY=votre_cle_secrete
-    export STRIPE_API_KEY=votre_cle_stripe
-    export MONGODB_URL=votre_url_mongodb
-    export REDIS_URL=votre_url_redis
+    export OPENAI_API_KEY=""
+    export BREVO_API_KEY=""
+    export MONGODB_URL=""
+    export SECRET_KEY=""
+    export REDIS_URL=""
+    export PORT=5000
+    export STRIPE_API_KEY=""
+    export STRIPE_PUBLIC_KEY=""
     ```
 
 5. Lancez l'application :
