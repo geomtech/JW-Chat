@@ -1,5 +1,5 @@
 // This is your test secret API key.
-const stripe = Stripe("");
+const stripe = Stripe("{{ stripe_public_key }}");
 
 initialize();
 

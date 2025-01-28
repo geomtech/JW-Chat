@@ -1,8 +1,11 @@
+import math
 from bson import ObjectId
 from flask import Blueprint, jsonify, render_template, request, redirect, url_for, flash, session
 from pymongo import MongoClient
 import stripe
 import os
+
+from utils import costs
 
 accounts_bp = Blueprint('accounts', __name__, template_folder='templates')
 
@@ -12,6 +15,8 @@ MONGODB_URL = os.environ.get("MONGODB_URL", "mongodb://localhost:27017/")
 client = MongoClient(MONGODB_URL)
 db = client['jw_chat']
 users_collection = db['users']
+payments_collection = db['payments']
+usage_collection = db['usage']
 
 @accounts_bp.route('/account', methods=['GET'])
 def account():
@@ -59,9 +64,23 @@ def create_checkout_session():
 
 @accounts_bp.route('/session-status', methods=['GET'])
 def session_status():
-    session = stripe.checkout.Session.retrieve(request.args.get('session_id'))
+    try:
+        stripe_session = stripe.checkout.Session.retrieve(request.args.get('session_id'))
 
-    return jsonify(status=session.status, customer_email=session.customer_details.email)
+        print(stripe_session.payment_status)
+        if stripe_session.payment_status == 'paid':
+            if not payments_collection.find_one({'payment_id': request.args.get('session_id')}):
+                payments_collection.insert_one({
+                    'user_id': ObjectId(session.get('user_id')),
+                    'amount': stripe_session.amount_total / 100,
+                    'payment_method': stripe_session.payment_method_types[0],
+                    'payment_status': stripe_session.payment_status,
+                    'payment_id': request.args.get('session_id')
+                })
+
+        return jsonify(status=stripe_session.status, customer_email=stripe_session.customer_details.email)
+    except:
+        return jsonify(status='failed')
 
 
 @accounts_bp.route('/return', methods=['GET'])
@@ -71,7 +90,21 @@ def return_page():
 
 @accounts_bp.route('/<amount>/checkout.js', methods=['GET'])
 def checkout_js(amount):
-    return render_template('checkout.js', amount=amount)
+    stripe_public_key = os.getenv('STRIPE_PUBLIC_KEY', None)
+    if not stripe_public_key:
+        return 'Error: Stripe public key not set', 400
+    print(stripe_public_key)
+    return render_template('checkout.js', amount=amount, stripe_public_key=stripe_public_key)
+
+
+@accounts_bp.route('/api/v1/balance', methods=['GET'])
+def balance():
+    user = get_user_from_session()
+    if user:
+        balance = costs.balance_for_user(user['_id'])
+
+        return jsonify(balance=balance)
+    return jsonify(balance=0)
 
 
 def get_user_from_session():

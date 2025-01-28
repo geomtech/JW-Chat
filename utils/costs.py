@@ -10,6 +10,8 @@ import math
 client = MongoClient(MONGODB_URL)
 db = client['jw_chat']
 usage_collection = db['usage']
+users_collection = db['users']
+payments_collection = db['payments']
 
 
 def addUsage(tokens_count, usage_type: str):
@@ -59,3 +61,30 @@ def calculate_cost_from_usage(tokens_count: int, usage_type: str = "default") ->
     cost = (tokens_count / 1_000_000) * cost_per_million
 
     return cost
+
+
+def balance_for_user(user_id: str):
+    if user_id:
+        user_found = users_collection.find_one({'_id': ObjectId(user_id)})
+        if user_found:
+            payments = list(payments_collection.find({'user_id': user_found['_id']}))
+            balance = sum([payment['amount'] for payment in payments])
+
+            usage = list(usage_collection.find({'user_id': user_found['_id']}))
+            usage = math.fsum([u['cost'] for u in usage])
+
+            # add TVA to usage
+            usage = usage * 1.2
+
+            # add fees to usage of 25%
+            usage = usage * 1.25
+
+            # add margin of 10%
+            usage = usage * 1.1
+
+            balance -= usage
+
+            balance = round(balance, 2)
+
+            return balance
+    return 0

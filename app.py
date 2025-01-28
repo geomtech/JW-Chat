@@ -18,11 +18,10 @@ from cachelib.file import FileSystemCache
 
 from openai import OpenAI
 
-from utils import eventhandler, email, db
+from utils import costs, eventhandler, email, db
 from utils.email import send_admin_notification
 
-# Import the accounts blueprint
-from blueprints.accounts import accounts_bp
+from blueprints import accounts, admin
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "your_secret_key")
@@ -45,8 +44,8 @@ users_collection = db['users']
 openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", "sk-proj..."))
 openai_assistant_id = ""
 
-# Register the accounts blueprint
-app.register_blueprint(accounts_bp)
+app.register_blueprint(accounts.accounts_bp)
+app.register_blueprint(admin.admin_bp)
 
 @app.route('/auth', methods=['GET', 'POST'])
 def login():
@@ -97,23 +96,6 @@ def register():
 
     return render_template('register.html')
 
-@app.route('/admin', methods=['GET', 'POST'])
-def admin():
-    if 'is_logged' not in session:
-        return redirect('/auth')
-
-    user = users_collection.find_one({"_id": ObjectId(session['user_id'])})
-    if not user or not user.get('is_admin', False):
-        return "Accès refusé."
-
-    if request.method == 'POST':
-        user_id = request.form['user_id']
-        users_collection.update_one({"_id": ObjectId(user_id)}, {"$set": {"is_active": True, "validation_date": time.strftime('%Y-%m-%d %H:%M:%S')}})
-        return redirect('/admin')
-
-    pending_users = users_collection.find({"is_active": False})
-    return render_template('admin.html', pending_users=pending_users)
-
 @app.route('/data-privacy', methods=['GET'])
 def data_privacy():
     return render_template('data-privacy.html')
@@ -122,6 +104,9 @@ def data_privacy():
 def index():
     if 'is_logged' not in session:
         return redirect('/auth')
+    
+    if costs.balance_for_user(session.get('user_id', None)) <= 0:
+        return redirect('/accounts')
     
     session.pop('thread_id', None)
     
@@ -133,9 +118,8 @@ def index():
 
     if user_id:
         user_history = history_collection.find({"user_id": user_id})
-        mail = users_collection.find_one({"_id": ObjectId(user_id)})['email']
         
-    return render_template('index.html', user_history=user_history, mail=mail)
+    return render_template('index.html', user_history=user_history)
 
 
 @app.route('/logout')
@@ -265,6 +249,10 @@ def handle_ask_openai(data):
         try:
             prompt = data.get("user_input")
             thread_id = session.get('thread_id', None)
+
+            if costs.balance_for_user(session.get('user_id', None)) <= 0:
+                socketio.emit('response', {'error': "Votre solde est insuffisant pour continuer."}, room=request.sid)
+                return
 
             assistants = openai_client.beta.assistants.list()
             openai_assistant_id = str(assistants.data[0].id)
